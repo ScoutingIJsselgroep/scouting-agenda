@@ -2,296 +2,55 @@
 """
 FastAPI server for serving generated ICS calendar files.
 
-Serves ICS files from the output directory with proper content-type headers.
+Main application that imports and registers all API endpoints.
 """
 
 import logging
-import secrets
-from pathlib import Path
-from typing import Any
+from contextlib import asynccontextmanager
 
-import yaml
-from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, JSONResponse
+import uvicorn
+from fastapi import FastAPI
+
+from scouting_agenda.api import calendars, health, sync
+from scouting_agenda.settings import initialize_settings, load_config
+from scouting_agenda.utils.calendar import list_available_calendars
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
+    initialize_settings()
+    logger.info("Server started")
+    logger.info(f"Available calendars: {list_available_calendars()}")
+
+    yield
+
+    # Shutdown (if needed in the future)
+    logger.info("Server shutting down")
+
+
+# Initialize FastAPI with lifespan
 app = FastAPI(
     title="Scouting Calendar Server",
     description="Serves merged iCal calendar files",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
-# Global config (loaded on startup)
-CONFIG: dict[str, Any] = {}
-OUTPUT_DIR: Path = Path("./output")
 
-
-class SecretYamlLoader(yaml.SafeLoader):
-    """Custom YAML loader that supports !secret tag like Home Assistant."""
-
-    pass
-
-
-def secret_constructor(loader: yaml.Loader, node: yaml.Node) -> str:
-    """
-    Constructor for !secret tag.
-    Loads value from secrets.yaml file.
-    """
-    secret_key = loader.construct_scalar(node)
-
-    # Load secrets file
-    secrets_path = Path("secrets.yaml")
-    if not secrets_path.exists():
-        # Graceful fallback for server (secrets only needed for sync)
-        logger.warning(f"secrets.yaml not found, secret '{secret_key}' unavailable")
-        return f"!secret {secret_key}"
-
-    try:
-        with open(secrets_path, encoding="utf-8") as f:
-            secrets = yaml.safe_load(f)
-
-        if secret_key not in secrets:
-            logger.warning(f"Secret '{secret_key}' not found in secrets.yaml")
-            return f"!secret {secret_key}"
-
-        return secrets[secret_key]
-    except Exception as e:
-        logger.warning(f"Error loading secret '{secret_key}': {e}")
-        return f"!secret {secret_key}"
-
-
-# Register the !secret constructor
-yaml.add_constructor("!secret", secret_constructor, SecretYamlLoader)
-
-
-def load_config(config_path: str = "config.yaml") -> dict[str, Any]:
-    """Load configuration from YAML file."""
-    try:
-        with open(config_path, encoding="utf-8") as f:
-            return yaml.safe_load(f)
-    except Exception as e:
-        logger.warning(f"Could not load config: {e}")
-        return {}
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Load configuration on server startup."""
-    global CONFIG, OUTPUT_DIR
-
-    CONFIG = load_config()
-
-    # Get output directory from config
-    output_dir_str = CONFIG.get("server", {}).get("output_dir", "./output")
-    OUTPUT_DIR = Path(output_dir_str)
-
-    # Ensure output directory exists
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-    logger.info("Server started")
-    logger.info(f"Output directory: {OUTPUT_DIR.absolute()}")
-    logger.info(f"Available calendars: {list_available_calendars()}")
-
-
-def list_available_calendars() -> list[str]:
-    """List all ICS files in output directory."""
-    if not OUTPUT_DIR.exists():
-        return []
-
-    return sorted([f.name for f in OUTPUT_DIR.glob("*.ics")])
-
-
-def get_calendar_config(calendar_name: str) -> dict[str, Any] | None:
-    """Get configuration for a specific calendar by filename."""
-    for cal in CONFIG.get("calendars", []):
-        if cal.get("output") == calendar_name:
-            return cal
-    return None
-
-
-def validate_password(calendar_config: dict[str, Any], provided_password: str | None) -> bool:
-    """Validate password for a calendar if password protection is enabled."""
-    required_password = calendar_config.get("password")
-
-    # No password required
-    if not required_password or required_password.startswith("!secret"):
-        return True
-
-    # Password required but none provided
-    if not provided_password:
-        return False
-
-    # Use constant-time comparison to prevent timing attacks
-    return secrets.compare_digest(required_password, provided_password)
-
-
-@app.get("/")
-async def root():
-    """
-    Health check and list available calendars.
-    """
-    calendars = list_available_calendars()
-
-    configured_calendars = []
-    for cal in CONFIG.get("calendars", []):
-        configured_calendars.append(
-            {
-                "name": cal.get("name"),
-                "file": cal.get("output"),
-                "visibility": cal.get("visibility", "all_details"),
-                "sources_count": len(cal.get("sources", [])),
-            }
-        )
-
-    return JSONResponse(
-        {
-            "status": "ok",
-            "message": "Scouting Calendar Server",
-            "calendars": calendars,
-            "configured": configured_calendars,
-            "output_dir": str(OUTPUT_DIR.absolute()),
-        }
-    )
-
-
-@app.get("/{calendar_name}")
-async def get_calendar(calendar_name: str, password: str | None = Query(None, alias="key")):
-    """
-    Serve an ICS calendar file.
-
-    Args:
-        calendar_name: Name of the ICS file (e.g., 'verhuur.ics')
-        password: Optional password for protected calendars (query param: ?key=xxx)
-
-    Returns:
-        ICS file with proper content-type header
-    """
-    # Ensure filename ends with .ics
-    if not calendar_name.endswith(".ics"):
-        calendar_name = f"{calendar_name}.ics"
-
-    file_path = OUTPUT_DIR / calendar_name
-
-    # Security: prevent directory traversal
-    try:
-        file_path = file_path.resolve()
-        OUTPUT_DIR.resolve()
-
-        if not str(file_path).startswith(str(OUTPUT_DIR.resolve())):
-            raise HTTPException(status_code=400, detail="Invalid calendar name")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Invalid calendar name") from e
-
-    # Check if file exists
-    if not file_path.exists():
-        available = list_available_calendars()
-        raise HTTPException(
-            status_code=404, detail=f"Calendar '{calendar_name}' not found. Available: {available}"
-        )
-
-    # Check password if calendar is protected
-    calendar_config = get_calendar_config(calendar_name)
-    if calendar_config and not validate_password(calendar_config, password):
-        raise HTTPException(
-            status_code=401, detail="Password required. Add ?key=your_password to the URL"
-        )
-
-    # Return file with proper content-type
-    return FileResponse(
-        path=file_path,
-        media_type="text/calendar; charset=utf-8",
-        filename=calendar_name,
-        headers={
-            "Content-Disposition": f'inline; filename="{calendar_name}"',
-            "Cache-Control": "no-cache, must-revalidate",
-        },
-    )
-
-
-@app.get("/api/sync")
-async def trigger_sync():
-    """
-    Manual sync trigger (for debugging).
-
-    Note: In production, use cron job instead.
-    This endpoint requires sync_calendars to be importable.
-    """
-    try:
-        # Import here to avoid requiring sync_calendars at server startup
-        import subprocess
-        import sys
-        from pathlib import Path
-
-        # Find the sync.py in the project root
-        project_root = Path(__file__).parent.parent
-        sync_script = project_root / "sync.py"
-
-        result = subprocess.run(
-            [sys.executable, str(sync_script)],
-            capture_output=True,
-            text=True,
-            timeout=120,
-            cwd=str(project_root),
-        )
-
-        return JSONResponse(
-            {
-                "status": "completed" if result.returncode == 0 else "failed",
-                "returncode": result.returncode,
-                "stdout": result.stdout,
-                "stderr": result.stderr,
-            }
-        )
-
-    except subprocess.TimeoutExpired:
-        return JSONResponse(
-            {"status": "timeout", "message": "Sync took too long (>120s)"}, status_code=500
-        )
-
-    except Exception as e:
-        logger.error(f"Sync failed: {e}")
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-
-
-@app.get("/api/calendars")
-async def list_calendars():
-    """
-    List all configured calendars with metadata.
-    """
-    calendars = []
-
-    for cal in CONFIG.get("calendars", []):
-        name = cal.get("name")
-        output_file = cal.get("output")
-        file_path = OUTPUT_DIR / output_file
-
-        calendars.append(
-            {
-                "name": name,
-                "file": output_file,
-                "url": f"/{output_file}",
-                "visibility": cal.get("visibility", "all_details"),
-                "sources": [
-                    {"name": s.get("name"), "url": s.get("url")[:50] + "..."}
-                    for s in cal.get("sources", [])
-                ],
-                "exists": file_path.exists(),
-                "size_bytes": file_path.stat().st_size if file_path.exists() else None,
-                "modified": file_path.stat().st_mtime if file_path.exists() else None,
-            }
-        )
-
-    return JSONResponse({"calendars": calendars})
+# Register routers
+app.include_router(health.router, tags=["health"])
+app.include_router(calendars.router, tags=["calendars"])
+app.include_router(sync.router, tags=["sync"])
 
 
 def run_server():
     """Start the FastAPI server."""
-    import uvicorn
-
     # Load config to get host/port
     config = load_config()
     server_config = config.get("server", {})
