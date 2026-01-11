@@ -6,6 +6,7 @@ Een systeem om meerdere iCal bronnen te mergen met configureerbare zichtbaarheid
 
 - **Configureerbaar via YAML**: Definieer meerdere kalenders met verschillende bronnen en zichtbaarheidsniveaus
 - **Home Assistant style secrets**: Gebruik `!secret` tag om gevoelige URLs veilig op te slaan
+- **Emoji support**: Voeg optioneel emoji's toe aan events voor betere visuele herkenning
 - **Visibility filtering**: 
   - `title_only`: Alleen event titel zichtbaar
   - `busy_only`: Alleen bezet/vrij (geen details)
@@ -13,6 +14,8 @@ Een systeem om meerdere iCal bronnen te mergen met configureerbare zichtbaarheid
 - **Automatische merge**: Combineer meerdere ICS bronnen tot één kalender
 - **Deduplicatie**: Automatisch dubbele events detecteren en verwijderen
 - **FastAPI server**: Serveer gegenereerde ICS bestanden via HTTP
+- **Docker ready**: Inclusief Dockerfile en docker-compose
+- **GitHub Actions**: Automatische Docker builds bij elke push
 - **Cron-ready**: Gebruik het sync script voor periodieke updates
 
 ## Project Structure
@@ -38,6 +41,8 @@ scouting-agenda/
 
 ## Installatie
 
+### Optie 1: Lokaal (Python)
+
 ```bash
 # Maak virtual environment
 uv venv
@@ -54,9 +59,61 @@ cp secrets.yaml.example secrets.yaml
 # Edit secrets.yaml met je eigen ICS URLs
 ```
 
+### Optie 2: Docker (aangeraden voor productie)
+
+```bash
+# Build image
+docker build -t scouting-agenda .
+
+# Of gebruik docker-compose
+docker-compose up -d
+```
+
+**Docker omgevingsvariabelen:**
+- `TZ`: Tijdzone (default: `Europe/Amsterdam`)
+
+**Docker volumes:**
+- `/app/config.yaml`: Configuratie bestand (read-only)
+- `/app/secrets.yaml`: Secrets bestand (read-only)
+- `/app/output`: Output directory voor gegenereerde ICS bestanden
+
+**Docker compose** start automatisch:
+- Server op poort 8000
+- Sync service die elke 10 minuten draait
+
+### Optie 3: Pre-built Docker image (GitHub Container Registry)
+
+```bash
+# Pull de latest image
+docker pull ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
+
+# Run met docker-compose
+docker-compose up -d
+```
+
 ## Configuratie
 
-### 1. Secrets instellen (Home Assistant style)
+### 1. Sec
+
+### Docker (aangeraden)
+
+```bash
+# Start alles (server + sync)
+docker-compose up -d
+
+# Alleen server
+docker-compose up -d scouting-calendar
+
+# Logs bekijken
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+Kalenders beschikbaar op: `http://localhost:8000/verhuur.ics`
+
+### Lokaal (Python)rets instellen (Home Assistant style)
 
 Maak `secrets.yaml` aan met je gevoelige ICS URLs:
 
@@ -187,6 +244,82 @@ python sync.py --verbose
 
 # Server met auto-reload
 uvicorn scouting_agenda.server:app --reload --host 0.0.0.0 --port 8000
+
+# Docker development build
+docker build -t scouting-agenda:dev .
+docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml -v $(pwd)/secrets.yaml:/app/secrets.yaml scouting-agenda:dev
+```
+
+## Deployment
+
+### Docker met GitHub Actions
+
+De repository bevat een GitHub Actions workflow die automatisch Docker images bouwt:
+
+1. **Push naar main/master**: Bouwt en pusht `latest` tag
+2. **Tag met `v*`**: Bouwt en pusht versioned tags (bijv. `v1.0.0`, `1.0`, `1`)
+3. **Pull requests**: Bouwt maar pusht niet
+
+**Images worden gepubliceerd naar GitHub Container Registry:**
+```
+ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
+ghcr.io/ScoutingIJsselgroep/scouting-agenda:v1.0.0
+```
+
+**Gebruik in productie:**
+
+```bash
+# Maak docker-compose.yml met GHCR image
+version: '3.8'
+services:
+  scouting-calendar:
+    image: ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./secrets.yaml:/app/secrets.yaml:ro
+      - calendar-data:/app/output
+    restart: unless-stopped
+
+volumes:
+  calendar-data:
+```
+
+### Kubernetes/Cloud
+
+Het Docker image kan direct gebruikt worden in Kubernetes, Cloud Run, of andere container platforms.
+
+**Voorbeeld Kubernetes deployment:**
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: scouting-calendar
+spec:
+  replicas: 1
+  template:
+    spec:
+      containers:
+      - name: server
+        image: ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
+        ports:
+        - containerPort: 8000
+        volumeMounts:
+        - name: config
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+        - name: secrets
+          mountPath: /app/secrets.yaml
+          subPath: secrets.yaml
+      volumes:
+      - name: config
+        configMap:
+          name: calendar-config
+      - name: secrets
+        secret:
+          name: calendar-secrets
 ```
 
 ## Home Assistant Integratie

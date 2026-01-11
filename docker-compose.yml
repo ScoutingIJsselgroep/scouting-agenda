@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  scouting-calendar:
+    build: .
+    image: scouting-agenda:latest
+    container_name: scouting-calendar
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount config and secrets (edit these locally)
+      - ./config.yaml:/app/config.yaml:ro
+      - ./secrets.yaml:/app/secrets.yaml:ro
+      
+      # Mount output directory (persisted)
+      - ./output:/app/output
+    
+    restart: unless-stopped
+    
+    environment:
+      - TZ=Europe/Amsterdam
+    
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: cron service for automatic sync
+  scouting-calendar-sync:
+    build: .
+    image: scouting-agenda:latest
+    container_name: scouting-calendar-sync
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ./secrets.yaml:/app/secrets.yaml:ro
+      - ./output:/app/output
+    
+    environment:
+      - TZ=Europe/Amsterdam
+    
+    # Run sync every 10 minutes
+    command: >
+      sh -c "while true; do
+        python sync.py;
+        sleep 600;
+      done"
+    
+    restart: unless-stopped
