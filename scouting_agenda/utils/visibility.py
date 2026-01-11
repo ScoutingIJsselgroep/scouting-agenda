@@ -31,7 +31,7 @@ def _norm_text(v) -> str:
 
 def _build_summary(original_summary: str, source_name: str, source_emoji: str | None) -> str:
     """Build event summary with optional emoji and source name."""
-    parts = [source_emoji, source_name] if source_emoji else [source_name]
+    parts = [f"{source_emoji} {source_name}"] if source_emoji else [source_name]
     if original_summary and original_summary != "Event":
         parts.append(original_summary)
     return ": ".join(parts) if len(parts) > 1 else parts[0]
