@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   scouting-calendar:
     build: .
@@ -11,15 +9,15 @@ services:
       # Mount config and secrets (edit these locally)
       - ./config.yaml:/app/config.yaml:ro
       - ./secrets.yaml:/app/secrets.yaml:ro
-      
+
       # Mount output directory (persisted)
       - ./output:/app/output
-    
+
     restart: unless-stopped
-    
+
     environment:
       - TZ=Europe/Amsterdam
-    
+
     # Healthcheck
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
@@ -37,15 +35,15 @@ services:
       - ./config.yaml:/app/config.yaml:ro
       - ./secrets.yaml:/app/secrets.yaml:ro
       - ./output:/app/output
-    
+
     environment:
       - TZ=Europe/Amsterdam
-    
+
     # Run sync every 10 minutes
     command: >
       sh -c "while true; do
-        python sync.py;
+        sync;
         sleep 600;
       done"
-    
+
     restart: unless-stopped

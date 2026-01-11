@@ -41,7 +41,7 @@ Je abonneert op een ICS link die automatisch wordt gegenereerd:
 
 ### Emoji Legend (Groepsbreed)
 - 🟢 Welpen
-- 🟡 Scouts  
+- 🟡 Scouts
 - 🟠 Explorers
 - 🔴 Roverscouts
 - 🔵 Stam
@@ -110,10 +110,10 @@ cp secrets.yaml.example secrets.yaml
 nano secrets.yaml
 
 # 3. Run sync
-python sync.py
+sync
 
 # 4. Start server
-python run_server.py
+server
 ```
 
 ## 📖 Documentatie

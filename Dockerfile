@@ -9,13 +9,11 @@ RUN pip install --no-cache-dir uv
 # Copy dependency files
 COPY pyproject.toml uv.lock* ./
 
-# Install dependencies using uv
-RUN uv pip install --system --no-cache -r pyproject.toml
-
-# Copy application code
+# Copy application code (needed for installation)
 COPY scouting_agenda/ ./scouting_agenda/
-COPY sync.py .
-COPY run_server.py .
+
+# Install package with dependencies (this creates the scripts)
+RUN uv pip install --system --no-cache .
 
 # Copy config files (will be overridden by volumes)
 COPY config.yaml .
@@ -27,4 +25,4 @@ RUN mkdir -p output
 EXPOSE 8000
 
 # Default command: run server
-CMD ["python", "run_server.py"]
+CMD ["server"]

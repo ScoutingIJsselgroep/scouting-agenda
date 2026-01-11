@@ -12,6 +12,10 @@ dependencies = [
     "uvicorn[standard]>=0.40.0",
 ]
 
+[project.scripts]
+sync = "scouting_agenda.sync_calendars:main"
+server = "scouting_agenda.server:run_server"
+
 [project.optional-dependencies]
 dev = [
     "ruff>=0.8.0",

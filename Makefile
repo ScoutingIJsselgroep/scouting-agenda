@@ -30,10 +30,10 @@ fix: ## Auto-fix linting issues and format code
 	ruff format .
 
 sync: ## Sync calendars
-	python sync.py
+	sync
 
 server: ## Start the server
-	python run_server.py
+	server
 
 docker-build: ## Build Docker image
 	docker build -t scouting-agenda:latest .
