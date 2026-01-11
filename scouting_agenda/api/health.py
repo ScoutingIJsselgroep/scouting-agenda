@@ -34,6 +34,7 @@ async def root(request: Request):
             "explorers": "Explorers",
             "roverscouts": "Roverscouts",
             "stam": "Stam",
+            "verhuur": "Verhuur",
             "groepsbreed": "🔒 Kaderleden",
         }
 
