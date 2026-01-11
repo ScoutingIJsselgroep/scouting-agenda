@@ -122,6 +122,7 @@ server
 - **[Docker Guide](docs/DOCKER.md)** - Docker setup en troubleshooting
 - **[Development](docs/DEVELOPMENT.md)** - Ontwikkelomgeving, code style
 - **[Deployment](docs/DEPLOYMENT.md)** - Production deployment, Nginx, Kubernetes
+ - **[Secrets & Env Vars](docs/SECRETS.md)** - Gebruik van secrets via `secrets.yaml` of environment variabelen
 
 ## 🔧 Configuratie
 

@@ -3,6 +3,7 @@ YAML utilities with !secret tag support (Home Assistant style).
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -20,14 +21,27 @@ class SecretYamlLoader(yaml.SafeLoader):
 def secret_constructor(loader: yaml.Loader, node: yaml.Node) -> str:
     """
     Constructor for !secret tag.
-    Loads value from secrets.yaml file.
+    Loads value from environment variable or secrets.yaml file.
+
+    Priority:
+    1. Environment variable (SECRET_<key_upper>)
+    2. secrets.yaml file
     """
     secret_key = loader.construct_scalar(node)
+
+    # Try environment variable first (convert key to uppercase with SECRET_ prefix)
+    env_key = f"SECRET_{secret_key.upper()}"
+    env_value = os.environ.get(env_key)
+    if env_value is not None:
+        logger.debug(f"Secret '{secret_key}' loaded from environment variable {env_key}")
+        return env_value
 
     # Load secrets file
     secrets_path = Path("secrets.yaml")
     if not secrets_path.exists():
-        logger.warning(f"secrets.yaml not found, secret '{secret_key}' unavailable")
+        logger.warning(
+            f"secrets.yaml not found and no env var {env_key}, secret '{secret_key}' unavailable"
+        )
         return f"!secret {secret_key}"
 
     try:
@@ -35,7 +49,7 @@ def secret_constructor(loader: yaml.Loader, node: yaml.Node) -> str:
             secrets = yaml.safe_load(f)
 
         if secret_key not in secrets:
-            logger.warning(f"Secret '{secret_key}' not found in secrets.yaml")
+            logger.warning(f"Secret '{secret_key}' not found in secrets.yaml or env var {env_key}")
             return f"!secret {secret_key}"
 
         return secrets[secret_key]

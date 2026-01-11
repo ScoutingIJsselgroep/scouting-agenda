@@ -17,6 +17,11 @@ services:
 
     environment:
       - TZ=Europe/Amsterdam
+      # Optional: Override secrets with environment variables
+      # Uncomment and set these instead of using secrets.yaml
+      # - SECRET_WELPEN_ICS_URL=https://...
+      # - SECRET_SCOUTS_ICS_URL=https://...
+      # - SECRET_GROEPSBREED_PASSWORD=your-password
 
     # Healthcheck
     healthcheck:
@@ -38,6 +43,9 @@ services:
 
     environment:
       - TZ=Europe/Amsterdam
+      # Optional: Override secrets with environment variables
+      # - SECRET_WELPEN_ICS_URL=https://...
+      # - SECRET_SCOUTS_ICS_URL=https://...
 
     # Run sync every 10 minutes
     command: >
