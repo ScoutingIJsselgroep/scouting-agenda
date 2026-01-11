@@ -67,6 +67,16 @@ calendars:
       cal_name: "Stam"
       timezone: "Europe/Amsterdam"
 
+  - name: verhuur
+    output: verhuur.ics
+    visibility: busy_only
+    sources:
+      - url: !secret verhuur_ics_url
+        name: "Verhuur"
+    metadata:
+      cal_name: "Verhuur"
+      timezone: "Europe/Amsterdam"
+
   # Groepsbreed kalender: merge all units, show all details
   - name: groepsbreed
     output: groepsbreed.ics
@@ -94,6 +104,9 @@ calendars:
       - url: !secret kader_ics_url
         name: "Kader"
         emoji: "🟣"
+      - url: !secret verhuur_ics_url
+        name: "Verhuur"
+        emoji: "🏠"
     metadata:
       cal_name: "Groepsbreed"
       timezone: "Europe/Amsterdam"
