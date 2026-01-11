@@ -3,6 +3,9 @@ FROM python:3.12-slim
 # Set working directory
 WORKDIR /app
 
+# Install curl for healthchecks
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Install uv for faster dependency installation
 RUN pip install --no-cache-dir uv
 
