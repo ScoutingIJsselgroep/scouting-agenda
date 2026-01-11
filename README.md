@@ -238,6 +238,46 @@ Trigger handmatige sync (optioneel, voor debugging).
 
 ## Development
 
+### Setup
+
+```bash
+# Install dev dependencies (includes ruff)
+uv pip install -e ".[dev]"
+
+# Install pre-commit hooks (optional)
+pip install pre-commit
+pre-commit install
+```
+
+### Code Quality
+
+**Ruff** is geconfigureerd voor linting en formatting:
+
+```bash
+# Lint code
+ruff check .
+
+# Auto-fix issues
+ruff check --fix .
+
+# Format code
+ruff format .
+
+# Check formatting without changes
+ruff format --check .
+```
+
+**Of gebruik Makefile shortcuts:**
+
+```bash
+make lint      # Run linter
+make format    # Format code
+make check     # Check lint + format
+make fix       # Auto-fix + format
+```
+
+### Running
+
 ```bash
 # Run sync met debug output
 python sync.py --verbose
@@ -248,6 +288,18 @@ uvicorn scouting_agenda.server:app --reload --host 0.0.0.0 --port 8000
 # Docker development build
 docker build -t scouting-agenda:dev .
 docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml -v $(pwd)/secrets.yaml:/app/secrets.yaml scouting-agenda:dev
+```
+
+### Pre-commit Hooks
+
+Pre-commit hooks runnen automatisch ruff bij elke commit:
+
+```bash
+# Setup
+pre-commit install
+
+# Manual run
+pre-commit run --all-files
 ```
 
 ## Deployment

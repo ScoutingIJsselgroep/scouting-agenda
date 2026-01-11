@@ -22,15 +22,13 @@ import yaml
 from icalendar import Calendar, Event, vText
 
 # Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
 class VisibilityLevel:
     """Visibility filtering levels for calendar events."""
+
     TITLE_ONLY = "title_only"
     BUSY_ONLY = "busy_only"
     ALL_DETAILS = "all_details"
@@ -38,6 +36,7 @@ class VisibilityLevel:
 
 class SecretYamlLoader(yaml.SafeLoader):
     """Custom YAML loader that supports !secret tag like Home Assistant."""
+
     pass
 
 
@@ -51,41 +50,29 @@ def secret_constructor(loader: yaml.Loader, node: yaml.Node) -> str:
     # Load secrets file
     secrets_path = Path("secrets.yaml")
     if not secrets_path.exists():
-        raise FileNotFoundError(
-            f"secrets.yaml not found. Create it with key: {secret_key}"
-        )
+        raise FileNotFoundError(f"secrets.yaml not found. Create it with key: {secret_key}")
 
-    with open(secrets_path, encoding='utf-8') as f:
+    with open(secrets_path, encoding="utf-8") as f:
         secrets = yaml.safe_load(f)
 
     if secret_key not in secrets:
-        raise KeyError(
-            f"Secret '{secret_key}' not found in secrets.yaml"
-        )
+        raise KeyError(f"Secret '{secret_key}' not found in secrets.yaml")
 
     return secrets[secret_key]
 
 
 # Register the !secret constructor
-yaml.add_constructor('!secret', secret_constructor, SecretYamlLoader)
+yaml.add_constructor("!secret", secret_constructor, SecretYamlLoader)
 
 
 def load_config(config_path: str = "config.yaml") -> dict[str, Any]:
     """Load and validate configuration from YAML file."""
     try:
-        with open(config_path, encoding='utf-8') as f:
+        with open(config_path, encoding="utf-8") as f:
             config = yaml.load(f, Loader=SecretYamlLoader)
 
-        if not config or 'calendars' not in config:
-            raise ValueError("Config must contain 'calendars' key")
-
-        return config
-    except FileNotFoundError:
-        logger.error(f"Config file not found: {config_path}")
-        sys.exit(1)
-
-        if not config or 'calendars' not in config:
-            raise ValueError("Config must contain 'calendars' key")
+        if not config or "calendars" not in config:
+            raise ValueError("Config must contain 'calendars' key") from None
 
         return config
     except FileNotFoundError:
@@ -101,9 +88,7 @@ def fetch_ics(url: str, timeout_s: int = 20) -> bytes:
     try:
         logger.info(f"Fetching: {url[:60]}...")
         r = requests.get(
-            url,
-            timeout=timeout_s,
-            headers={"User-Agent": "scouting-calendar-merger/1.0"}
+            url, timeout=timeout_s, headers={"User-Agent": "scouting-calendar-merger/1.0"}
         )
         r.raise_for_status()
 
@@ -158,20 +143,17 @@ def to_calendar(blob: bytes) -> Calendar:
 
 
 def apply_visibility_filter(
-    event: Event,
-    visibility: str,
-    source_name: str,
-    source_emoji: str = None
+    event: Event, visibility: str, source_name: str, source_emoji: str = None
 ) -> Event:
     """
     Apply privacy filtering to event based on visibility level.
-    
+
     Args:
         event: Original event
         visibility: One of VisibilityLevel values
         source_name: Name of source calendar (for labeling)
         source_emoji: Optional emoji to prefix to event title
-    
+
     Returns:
         Filtered event
     """
@@ -205,11 +187,19 @@ def apply_visibility_filter(
 
         # Build summary with optional emoji and source name
         if source_emoji:
-            summary_parts = [source_emoji, source_name, original_summary] if original_summary != "Event" else [source_emoji, source_name]
+            summary_parts = (
+                [source_emoji, source_name, original_summary]
+                if original_summary != "Event"
+                else [source_emoji, source_name]
+            )
         else:
-            summary_parts = [source_name, original_summary] if original_summary != "Event" else [source_name]
+            summary_parts = (
+                [source_name, original_summary] if original_summary != "Event" else [source_name]
+            )
 
-        filtered["SUMMARY"] = ": ".join(summary_parts) if len(summary_parts) > 1 else summary_parts[0]
+        filtered["SUMMARY"] = (
+            ": ".join(summary_parts) if len(summary_parts) > 1 else summary_parts[0]
+        )
 
         # Keep transparency
         if "TRANSP" in event:
@@ -231,18 +221,16 @@ def apply_visibility_filter(
 
 
 def merge_calendars(
-    sources: list[tuple[str, str, str, Calendar]],
-    visibility: str,
-    metadata: dict[str, Any]
+    sources: list[tuple[str, str, str, Calendar]], visibility: str, metadata: dict[str, Any]
 ) -> Calendar:
     """
     Merge multiple calendars into one with visibility filtering.
-    
+
     Args:
         sources: List of (source_name, source_emoji, source_url, calendar) tuples
         visibility: Visibility level to apply
         metadata: Calendar metadata (name, description, timezone)
-    
+
     Returns:
         Merged calendar
     """
@@ -270,7 +258,7 @@ def merge_calendars(
     count_in = 0
     count_out = 0
 
-    for source_name, source_emoji, source_url, cal in sources:
+    for source_name, source_emoji, _source_url, cal in sources:
         logger.info(f"Processing source: {source_name}{' ' + source_emoji if source_emoji else ''}")
         for component in cal.walk():
             if component.name != "VEVENT":
@@ -286,7 +274,9 @@ def merge_calendars(
             seen.add(key)
 
             # Apply visibility filtering with optional emoji
-            filtered_event = apply_visibility_filter(component, visibility, source_name, source_emoji)
+            filtered_event = apply_visibility_filter(
+                component, visibility, source_name, source_emoji
+            )
             merged.add_component(filtered_event)
             count_out += 1
 
@@ -306,7 +296,7 @@ def write_atomic(path: str, data: bytes) -> None:
 def sync_calendar(cal_config: dict[str, Any], base_config: dict[str, Any]) -> None:
     """
     Sync a single calendar configuration.
-    
+
     Args:
         cal_config: Calendar configuration from YAML
         base_config: Global configuration (for timeout, output_dir, etc)
@@ -317,12 +307,12 @@ def sync_calendar(cal_config: dict[str, Any], base_config: dict[str, Any]) -> No
     sources = cal_config.get("sources", [])
     metadata = cal_config.get("metadata", {})
 
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"Syncing calendar: {name}")
     logger.info(f"Output: {output_file}")
     logger.info(f"Visibility: {visibility}")
     logger.info(f"Sources: {len(sources)}")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     if not sources:
         logger.warning(f"No sources configured for {name}, skipping")
@@ -379,19 +369,10 @@ def main():
         description="Sync and merge iCal calendars based on config.yaml"
     )
     parser.add_argument(
-        "--config",
-        default="config.yaml",
-        help="Path to config file (default: config.yaml)"
+        "--config", default="config.yaml", help="Path to config file (default: config.yaml)"
     )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Enable verbose debug logging"
-    )
-    parser.add_argument(
-        "--calendar",
-        help="Only sync specific calendar (by name)"
-    )
+    parser.add_argument("--verbose", action="store_true", help="Enable verbose debug logging")
+    parser.add_argument("--calendar", help="Only sync specific calendar (by name)")
 
     args = parser.parse_args()
 
@@ -422,9 +403,9 @@ def main():
             fail_count += 1
 
     # Summary
-    logger.info(f"\n{'='*60}")
+    logger.info(f"\n{'=' * 60}")
     logger.info(f"Sync complete: {success_count} succeeded, {fail_count} failed")
-    logger.info(f"{'='*60}")
+    logger.info(f"{'=' * 60}")
 
     if fail_count > 0:
         sys.exit(1)
