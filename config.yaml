@@ -27,7 +27,7 @@ calendars:
     metadata:
       cal_name: "Scouts"
       timezone: "Europe/Amsterdam"
-  
+
   # Explorers kalender: direct doorvoer met alle details
   - name: explorers
     output: explorers.ics
@@ -66,11 +66,12 @@ calendars:
     metadata:
       cal_name: "Stam"
       timezone: "Europe/Amsterdam"
-  
+
   # Groepsbreed kalender: merge all units, show all details
   - name: groepsbreed
     output: groepsbreed.ics
     visibility: all_details
+    password: !secret groepsbreed_password
     sources:
       - url: !secret welpen_ics_url
         name: "Welpen"

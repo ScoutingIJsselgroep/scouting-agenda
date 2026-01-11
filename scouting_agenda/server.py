@@ -6,11 +6,12 @@ Serves ICS files from the output directory with proper content-type headers.
 """
 
 import logging
+import secrets
 from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
 
 # Setup logging
@@ -104,6 +105,30 @@ def list_available_calendars() -> list[str]:
     return sorted([f.name for f in OUTPUT_DIR.glob("*.ics")])
 
 
+def get_calendar_config(calendar_name: str) -> dict[str, Any] | None:
+    """Get configuration for a specific calendar by filename."""
+    for cal in CONFIG.get("calendars", []):
+        if cal.get("output") == calendar_name:
+            return cal
+    return None
+
+
+def validate_password(calendar_config: dict[str, Any], provided_password: str | None) -> bool:
+    """Validate password for a calendar if password protection is enabled."""
+    required_password = calendar_config.get("password")
+
+    # No password required
+    if not required_password or required_password.startswith("!secret"):
+        return True
+
+    # Password required but none provided
+    if not provided_password:
+        return False
+
+    # Use constant-time comparison to prevent timing attacks
+    return secrets.compare_digest(required_password, provided_password)
+
+
 @app.get("/")
 async def root():
     """
@@ -134,12 +159,13 @@ async def root():
 
 
 @app.get("/{calendar_name}")
-async def get_calendar(calendar_name: str):
+async def get_calendar(calendar_name: str, password: str | None = Query(None, alias="key")):
     """
     Serve an ICS calendar file.
 
     Args:
         calendar_name: Name of the ICS file (e.g., 'verhuur.ics')
+        password: Optional password for protected calendars (query param: ?key=xxx)
 
     Returns:
         ICS file with proper content-type header
@@ -165,6 +191,13 @@ async def get_calendar(calendar_name: str):
         available = list_available_calendars()
         raise HTTPException(
             status_code=404, detail=f"Calendar '{calendar_name}' not found. Available: {available}"
+        )
+
+    # Check password if calendar is protected
+    calendar_config = get_calendar_config(calendar_name)
+    if calendar_config and not validate_password(calendar_config, password):
+        raise HTTPException(
+            status_code=401, detail="Password required. Add ?key=your_password to the URL"
         )
 
     # Return file with proper content-type

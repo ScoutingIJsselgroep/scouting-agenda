@@ -9,7 +9,7 @@ repos:
       # Run the linter
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
-      
+
       # Run the formatter
       - id: ruff-format
 
@@ -19,6 +19,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        args: ['--unsafe']  # Allow custom YAML tags like !secret
       - id: check-added-large-files
         args: ['--maxkb=500']
       - id: check-merge-conflict
