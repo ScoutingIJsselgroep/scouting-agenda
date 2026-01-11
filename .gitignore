@@ -1,0 +1,26 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Calendar output files
+output/
+*.tmp
+*.log
+
+# Secrets (like Home Assistant)
+secrets.yaml
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+

@@ -1,0 +1,110 @@
+# Calendar merge configuration
+# Each entry defines one merged calendar output
+
+calendars:
+  # Welpen kalender: direct doorvoer met alle details
+  - name: welpen
+    output: welpen.ics
+    visibility: title_only
+    sources:
+      - url: !secret welpen_ics_url
+        name: "Welpen"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+    metadata:
+      cal_name: "Welpen"
+      timezone: "Europe/Amsterdam"
+
+  # Scouts kalender: direct doorvoer met alle details
+  - name: scouts
+    output: scouts.ics
+    visibility: title_only
+    sources:
+      - url: !secret scouts_ics_url
+        name: "Scouts"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+    metadata:
+      cal_name: "Scouts"
+      timezone: "Europe/Amsterdam"
+  
+  # Explorers kalender: direct doorvoer met alle details
+  - name: explorers
+    output: explorers.ics
+    visibility: all_details
+    sources:
+      - url: !secret explorers_ics_url
+        name: "Explorers"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+    metadata:
+      cal_name: "Explorers"
+      timezone: "Europe/Amsterdam"
+
+  # Roverscouts kalender: direct doorvoer met alle details
+  - name: roverscouts
+    output: roverscouts.ics
+    visibility: all_details
+    sources:
+      - url: !secret roverscouts_ics_url
+        name: "Roverscouts"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+    metadata:
+      cal_name: "Roverscouts"
+      timezone: "Europe/Amsterdam"
+
+  # Stam kalender: direct doorvoer met alle details
+  - name: stam
+    output: stam.ics
+    visibility: all_details
+    sources:
+      - url: !secret stam_ics_url
+        name: "Stam"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+    metadata:
+      cal_name: "Stam"
+      timezone: "Europe/Amsterdam"
+  
+  # Groepsbreed kalender: merge all units, show all details
+  - name: groepsbreed
+    output: groepsbreed.ics
+    visibility: all_details
+    sources:
+      - url: !secret welpen_ics_url
+        name: "Welpen"
+        emoji: "🟢"
+      - url: !secret scouts_ics_url
+        name: "Scouts"
+        emoji: "🟡"
+      - url: !secret explorers_ics_url
+        name: "Explorers"
+        emoji: "🟠"
+      - url: !secret roverscouts_ics_url
+        name: "Roverscouts"
+        emoji: "🔴"
+      - url: !secret stam_ics_url
+        name: "Stam"
+        emoji: "🔵"
+      - url: !secret groepsactiviteiten_ics_url
+        name: "Groepsactiviteiten"
+        emoji: "⚪"
+      - url: !secret kader_ics_url
+        name: "Kader"
+        emoji: "🟣"
+    metadata:
+      cal_name: "Groepsbreed"
+      timezone: "Europe/Amsterdam"
+
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  output_dir: "./output"
+
+# Sync configuration (for cron job)
+sync:
+  timeout_seconds: 20
+  retry_attempts: 3
