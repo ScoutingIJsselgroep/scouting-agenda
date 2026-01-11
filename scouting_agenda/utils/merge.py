@@ -99,7 +99,9 @@ def merge_calendars(
                 continue
 
             count_in += 1
-            key = event_key(component)
+            # Cast to Event for type safety
+            event = Event.from_ical(component.to_ical())
+            key = event_key(event)
 
             if key in seen:
                 logger.debug(f"Skipping duplicate event: {key}")
@@ -108,9 +110,7 @@ def merge_calendars(
             seen.add(key)
 
             # Apply visibility filtering with optional emoji
-            filtered_event = apply_visibility_filter(
-                component, visibility, source_name, source_emoji
-            )
+            filtered_event = apply_visibility_filter(event, visibility, source_name, source_emoji)
             merged.add_component(filtered_event)
             count_out += 1
 

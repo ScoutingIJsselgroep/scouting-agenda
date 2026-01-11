@@ -29,6 +29,29 @@ def _norm_text(v) -> str:
     return str(v)
 
 
+def _build_summary(original_summary: str, source_name: str, source_emoji: str | None) -> str:
+    """Build event summary with optional emoji and source name."""
+    parts = [source_emoji, source_name] if source_emoji else [source_name]
+    if original_summary and original_summary != "Event":
+        parts.append(original_summary)
+    return ": ".join(parts) if len(parts) > 1 else parts[0]
+
+
+def _copy_essential_fields(event: Event, filtered: Event, source_name: str) -> None:
+    """Copy essential fields and generate UID if missing."""
+    essential_fields = ["UID", "DTSTART", "DTEND", "DTSTAMP", "CREATED", "LAST-MODIFIED"]
+    for field in essential_fields:
+        if field in event:
+            filtered[field] = event[field]
+
+    # Generate UID if missing
+    if "UID" not in filtered:
+        summary = _norm_text(event.get("SUMMARY", "event"))
+        dtstart = event.get("DTSTART", "")
+        uid_raw = f"{source_name}-{summary}-{dtstart}".encode()
+        filtered["UID"] = hashlib.md5(uid_raw).hexdigest()
+
+
 def apply_visibility_filter(
     event: Event, visibility: str, source_name: str, source_emoji: str | None = None
 ) -> Event:
@@ -44,64 +67,28 @@ def apply_visibility_filter(
     Returns:
         Filtered event
     """
+    original_summary = _norm_text(event.get("SUMMARY", "Event"))
+
     if visibility == VisibilityLevel.ALL_DETAILS:
-        # Keep everything, just add source marker and optional emoji
+        event["SUMMARY"] = _build_summary(original_summary, source_name, source_emoji)
         event["X-SOURCE-CALENDAR"] = source_name
-        if source_emoji:
-            original_summary = _norm_text(event.get("SUMMARY", "Event"))
-            event["SUMMARY"] = f"{source_emoji} {original_summary}"
         return event
 
     # Create filtered event with essential fields
     filtered = Event()
-
-    # Always keep these fields
-    essential_fields = ["UID", "DTSTART", "DTEND", "DTSTAMP", "CREATED", "LAST-MODIFIED"]
-    for field in essential_fields:
-        if field in event:
-            filtered[field] = event[field]
-
-    # Generate UID if missing
-    if "UID" not in filtered:
-        summary = _norm_text(event.get("SUMMARY", "event"))
-        dtstart = event.get("DTSTART", "")
-        uid_raw = f"{source_name}-{summary}-{dtstart}".encode()
-        filtered["UID"] = hashlib.md5(uid_raw).hexdigest()
+    _copy_essential_fields(event, filtered, source_name)
+    filtered["X-SOURCE-CALENDAR"] = source_name
 
     if visibility == VisibilityLevel.TITLE_ONLY:
-        # Show title and basic time info only
-        original_summary = _norm_text(event.get("SUMMARY", "Event"))
-
-        # Build summary with optional emoji and source name
-        if source_emoji:
-            summary_parts = (
-                [source_emoji, source_name, original_summary]
-                if original_summary != "Event"
-                else [source_emoji, source_name]
-            )
-        else:
-            summary_parts = (
-                [source_name, original_summary] if original_summary != "Event" else [source_name]
-            )
-
-        filtered["SUMMARY"] = (
-            ": ".join(summary_parts) if len(summary_parts) > 1 else summary_parts[0]
-        )
-
-        # Keep transparency
+        filtered["SUMMARY"] = _build_summary(original_summary, source_name, source_emoji)
+        filtered["CLASS"] = "PUBLIC"
         if "TRANSP" in event:
             filtered["TRANSP"] = event["TRANSP"]
 
-        # Mark as private to hint clients
-        filtered["CLASS"] = "PUBLIC"
-        filtered["X-SOURCE-CALENDAR"] = source_name
-
     elif visibility == VisibilityLevel.BUSY_ONLY:
-        # Only show busy/free status
         busy_text = f"{source_emoji} Bezet" if source_emoji else "Bezet"
         filtered["SUMMARY"] = busy_text
-        filtered["TRANSP"] = "OPAQUE"  # Mark as busy
+        filtered["TRANSP"] = "OPAQUE"
         filtered["CLASS"] = "PRIVATE"
-        filtered["X-SOURCE-CALENDAR"] = source_name
 
     return filtered

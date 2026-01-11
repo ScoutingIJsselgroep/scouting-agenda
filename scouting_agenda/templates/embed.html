@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scouting IJsselake  - Agenda Widget</title>
+    <link rel="icon" type="image/png" id="favicon" href="">
+    <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --azuurblauw: #0C40AA;
+            --goud: #FCDD07;
+            --azuurlichtst: #BCCAE7;
+        }
+
+        * {
+            font-family: 'Poppins', Arial, sans-serif;
+            font-weight: 300;
+        }
+
+        .heading {
+            font-family: 'Source Sans Pro', Arial, sans-serif;
+        }
+
+        #app {
+            background: transparent;
+        }
+
+        .v-tab {
+            text-transform: none !important;
+            font-family: 'Source Sans Pro', Arial, sans-serif !important;
+        }
+
+        .bg-azuurlichtst {
+            background: linear-gradient(135deg, #BCCAE7 0%, #d4dff3 100%) !important;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: #e0e0e0;
+            border: 1px solid #e0e0e0;
+        }
+
+        .calendar-header {
+            background: #0C40AA;
+            color: white;
+            padding: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .calendar-day {
+            background: white;
+            min-height: 80px;
+            padding: 8px;
+            cursor: pointer;
+            position: relative;
+            transition: background 0.2s;
+        }
+
+        .calendar-day:hover {
+            background: #f5f5f5;
+        }
+
+        .calendar-day.other-month {
+            background: #fafafa;
+            color: #999;
+        }
+
+        .calendar-day.has-events {
+            background: #e8f0ff;
+        }
+
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .event-indicator {
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            background: #0C40AA;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .speltak-logo {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-container fluid class="pa-0">
+                <v-card flat>
+                    <v-tabs
+                        v-model="activeTab"
+                        color="#0C40AA"
+                        bg-color="white"
+                    >
+                        <v-tab v-for="cal in calendars" :key="cal.name" :value="cal.name">
+                            <img
+                                v-if="getLogoPath(cal.name)"
+                                :src="getLogoPath(cal.name)"
+                                class="speltak-logo me-2"
+                            />
+                            <span v-text="cal.display_name"></span>
+                        </v-tab>
+                    </v-tabs>
+
+                    <v-window v-model="activeTab">
+                        <v-window-item v-for="cal in calendars" :key="cal.name" :value="cal.name">
+                            <v-card flat class="pa-4">
+                                <!-- Info banner -->
+                                <v-alert
+                                    color="#BCCAE7"
+                                    class="mb-4"
+                                    border="start"
+                                    border-color="#0C40AA"
+                                >
+                                    <div class="d-flex align-center justify-space-between flex-wrap">
+                                        <div>
+                                            <div class="text-h6 heading" style="color: #0C40AA;">
+                                                <span v-text="cal.display_name"></span> Agenda
+                                            </div>
+                                            <div class="text-caption mt-1">
+                                                <strong>Bronnen:</strong> <span v-text="cal.sources.length"></span> kalender(s) ·
+                                                <strong>Privacy:</strong>
+                                                <span v-if="cal.visibility === 'title_only'">Alleen titel</span>
+                                                <span v-else-if="cal.visibility === 'busy_only'">Alleen bezet</span>
+                                                <span v-else>Alle details</span>
+                                            </div>
+                                        </div>
+                                        <v-btn
+                                            color="#0C40AA"
+                                            variant="elevated"
+                                            @click="showSubscribeDialog(cal)"
+                                            class="mt-2 mt-sm-0"
+                                        >
+                                            <v-icon start>mdi-calendar-plus</v-icon>
+                                            Abonneren
+                                        </v-btn>
+                                    </div>
+                                </v-alert>
+
+                                <!-- Calendar -->
+                                <div v-if="!cal.protected">
+                                    <!-- Month/List view toggle -->
+                                    <v-btn-toggle
+                                        v-model="viewMode"
+                                        color="#0C40AA"
+                                        mandatory
+                                        class="mb-4"
+                                    >
+                                        <v-btn value="month">
+                                            <v-icon start>mdi-calendar-month</v-icon>
+                                            Maand
+                                        </v-btn>
+                                        <v-btn value="list">
+                                            <v-icon start>mdi-format-list-bulleted</v-icon>
+                                            Lijst
+                                        </v-btn>
+                                    </v-btn-toggle>
+
+                                    <!-- Month View -->
+                                    <div v-if="viewMode === 'month'" class="calendar-month">
+                                        <div class="d-flex align-center justify-space-between mb-4">
+                                            <v-btn icon @click="previousMonth" size="small">
+                                                <v-icon>mdi-chevron-left</v-icon>
+                                            </v-btn>
+                                            <h3 class="heading" style="color: #0C40AA;" v-text="currentMonthLabel"></h3>
+                                            <v-btn icon @click="nextMonth" size="small">
+                                                <v-icon>mdi-chevron-right</v-icon>
+                                            </v-btn>
+                                        </div>
+                                        <div class="calendar-grid">
+                                            <div v-for="day in ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']" :key="day" class="calendar-header">
+                                                <span v-text="day"></span>
+                                            </div>
+                                            <div v-for="day in calendarDays" :key="day.date"
+                                                 :class="['calendar-day', { 'other-month': !day.currentMonth, 'has-events': day.events.length > 0 }]"
+                                                 @click="showDayEvents(day)">
+                                                <div class="day-number" v-text="day.day"></div>
+                                                <div v-if="day.events.length > 0" class="event-indicator">
+                                                    <span v-text="day.events.length"></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- List View -->
+                                    <v-list v-else lines="two">
+                                        <v-list-item
+                                            v-for="event in sortedEvents(cal.name)"
+                                            :key="event.title + event.start"
+                                            @click="showEvent({ event })"
+                                            class="mb-2"
+                                            rounded
+                                            border
+                                        >
+                                            <template v-slot:prepend>
+                                                <v-icon color="#0C40AA">mdi-calendar</v-icon>
+                                            </template>
+                                            <v-list-item-title class="heading" v-text="event.title"></v-list-item-title>
+                                            <v-list-item-subtitle v-text="formatDate(event.start)"></v-list-item-subtitle>
+                                        </v-list-item>
+                                        <v-list-item v-if="sortedEvents(cal.name).length === 0">
+                                            <v-list-item-title class="text-center text-grey">
+                                                Geen events gevonden
+                                            </v-list-item-title>
+                                        </v-list-item>
+                                    </v-list>
+                                </div>
+
+                                <v-alert
+                                    v-else
+                                    type="warning"
+                                    variant="tonal"
+                                    class="mt-4"
+                                >
+                                    🔒 Deze kalender is beveiligd, en alleen beschikbaar voor kaderleden.
+                                </v-alert>
+                            </v-card>
+                        </v-window-item>
+                    </v-window>
+                </v-card>
+
+                <!-- Subscribe Dialog -->
+                <v-dialog v-model="subscribeDialog" max-width="700" scrollable>
+                    <v-card>
+                        <v-card-title class="d-flex align-center pa-6 bg-azuurlichtst">
+                            <v-icon size="large" color="#0C40AA" class="mr-3">mdi-calendar-plus</v-icon>
+                            <span class="heading text-h5" style="color: #0C40AA;">Kalender toevoegen</span>
+                        </v-card-title>
+
+                        <v-divider></v-divider>
+
+                        <v-card-text class="pa-6">
+                            <v-alert
+                                v-if="selectedCalendar && selectedCalendar.protected"
+                                color="warning"
+                                variant="tonal"
+                                prominent
+                                class="mb-6"
+                                icon="mdi-lock"
+                            >
+                                <div class="text-subtitle-1 font-weight-bold">Beveiligde kalender</div>
+                                <div class="text-body-2">Vervang "WACHTWOORD_HIER" in de URL met het juiste wachtwoord</div>
+                            </v-alert>
+
+                            <!-- URL Box -->
+                            <v-card
+                                variant="outlined"
+                                class="pa-4 mb-6 bg-grey-lighten-5"
+                                @click="copyUrl"
+                                style="cursor: pointer; border: 2px solid #0C40AA; border-radius: 12px;"
+                                hover
+                            >
+                                <div class="d-flex align-center justify-space-between mb-2">
+                                    <div class="text-caption font-weight-bold text-grey-darken-1">KALENDER URL</div>
+                                    <v-chip size="small" color="#0C40AA" variant="flat">
+                                        <v-icon start size="small">mdi-content-copy</v-icon>
+                                        Klik om te kopiëren
+                                    </v-chip>
+                                </div>
+                                <div class="text-body-2 font-mono text-grey-darken-3" style="word-break: break-all; line-height: 1.6;" v-text="subscribeUrl">
+                                </div>
+                            </v-card>
+
+                            <!-- Instructions -->
+                            <div class="text-h6 heading mb-4" style="color: #0C40AA;">
+                                📱 Instructies per platform
+                            </div>
+
+                            <v-expansion-panels variant="accordion" class="mb-4">
+                                <v-expansion-panel>
+                                    <v-expansion-panel-title class="heading">
+                                        <v-icon color="#0C40AA" class="mr-3">mdi-google</v-icon>
+                                        Google Calendar
+                                    </v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <ol class="text-body-2 pl-4">
+                                            <li class="mb-2">Ga naar <a href="https://calendar.google.com" target="_blank" style="color: #0C40AA; text-decoration: none; font-weight: 600;">calendar.google.com</a></li>
+                                            <li class="mb-2">Klik op het <strong>+</strong> icoon naast <em>"Andere agenda's"</em></li>
+                                            <li class="mb-2">Selecteer <strong>"Via URL"</strong></li>
+                                            <li class="mb-2">Plak de gekopieerde link en klik op <strong>"Toevoegen"</strong></li>
+                                        </ol>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+
+                                <v-expansion-panel>
+                                    <v-expansion-panel-title class="heading">
+                                        <v-icon color="#0C40AA" class="mr-3">mdi-apple</v-icon>
+                                        Apple Calendar (iPhone/Mac)
+                                    </v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <div class="mb-3">
+                                            <div class="text-subtitle-2 font-weight-bold mb-2">Mac:</div>
+                                            <ol class="text-body-2 pl-4">
+                                                <li class="mb-2">Open de <strong>Agenda</strong> app</li>
+                                                <li class="mb-2">Ga naar <strong>Bestand → Nieuw agenda-abonnement</strong></li>
+                                                <li class="mb-2">Plak de link en klik op <strong>"Abonneren"</strong></li>
+                                            </ol>
+                                        </div>
+                                        <div>
+                                            <div class="text-subtitle-2 font-weight-bold mb-2">iPhone/iPad:</div>
+                                            <ol class="text-body-2 pl-4">
+                                                <li class="mb-2">Open <strong>Instellingen</strong></li>
+                                                <li class="mb-2">Ga naar <strong>Agenda → Accounts → Account toevoegen → Overige</strong></li>
+                                                <li class="mb-2">Kies <strong>"Voeg abonnement op agenda toe"</strong></li>
+                                                <li class="mb-2">Plak de link en tik op <strong>"Abonneren"</strong></li>
+                                            </ol>
+                                        </div>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+
+                                <v-expansion-panel>
+                                    <v-expansion-panel-title class="heading">
+                                        <v-icon color="#0C40AA" class="mr-3">mdi-microsoft-outlook</v-icon>
+                                        Outlook
+                                    </v-expansion-panel-title>
+                                    <v-expansion-panel-text>
+                                        <ol class="text-body-2 pl-4">
+                                            <li class="mb-2">Open Outlook en ga naar de <strong>Agenda</strong> sectie</li>
+                                            <li class="mb-2">Klik op <strong>"Agenda toevoegen"</strong></li>
+                                            <li class="mb-2">Selecteer <strong>"Abonneren op internet"</strong></li>
+                                            <li class="mb-2">Plak de link en klik op <strong>"Importeren"</strong></li>
+                                        </ol>
+                                    </v-expansion-panel-text>
+                                </v-expansion-panel>
+                            </v-expansion-panels>
+                        </v-card-text>
+
+                        <v-divider></v-divider>
+
+                        <v-card-actions class="pa-4">
+                            <v-spacer></v-spacer>
+                            <v-btn
+                                variant="text"
+                                @click="subscribeDialog = false"
+                                color="#0C40AA"
+                            >
+                                Sluiten
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+
+                <!-- Event Details Dialog -->
+                <v-dialog v-model="eventDialog" max-width="500">
+                    <v-card v-if="selectedEvent">
+                        <v-card-title class="heading" style="color: #0C40AA;" v-text="selectedEvent.title">
+                        </v-card-title>
+                        <v-card-text>
+                            <div v-if="selectedEvent.start" class="mb-2">
+                                <v-icon size="small" class="mr-2">mdi-clock-outline</v-icon>
+                                <strong>Start:</strong> <span v-text="formatDate(selectedEvent.start)"></span>
+                            </div>
+                            <div v-if="selectedEvent.end" class="mb-2">
+                                <v-icon size="small" class="mr-2">mdi-clock-outline</v-icon>
+                                <strong>Eind:</strong> <span v-text="formatDate(selectedEvent.end)"></span>
+                            </div>
+                            <div v-if="selectedEvent.location" class="mb-2">
+                                <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
+                                <strong>Locatie:</strong> <span v-text="selectedEvent.location"></span>
+                            </div>
+                            <div v-if="selectedEvent.description" class="mb-2">
+                                <v-icon size="small" class="mr-2">mdi-text</v-icon>
+                                <strong>Beschrijving:</strong><br>
+                                <span v-text="selectedEvent.description"></span>
+                            </div>
+                            <div v-if="selectedEvent.url">
+                                <v-btn
+                                    :href="selectedEvent.url"
+                                    target="_blank"
+                                    color="#0C40AA"
+                                    variant="outlined"
+                                    size="small"
+                                >
+                                    <v-icon start>mdi-link</v-icon>
+                                    Meer info
+                                </v-btn>
+                            </div>
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn @click="eventDialog = false">Sluiten</v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+
+                <!-- Day Events Dialog -->
+                <v-dialog v-model="dayEventsDialog" max-width="500">
+                    <v-card>
+                        <v-card-title class="heading" style="color: #0C40AA;">
+                            Events op deze dag
+                        </v-card-title>
+                        <v-list>
+                            <v-list-item
+                                v-for="event in selectedDayEvents"
+                                :key="event.title + event.start"
+                                @click="eventDialog = true; dayEventsDialog = false; selectedEvent = event"
+                            >
+                                <v-list-item-title v-text="event.title"></v-list-item-title>
+                                <v-list-item-subtitle v-text="formatDate(event.start)"></v-list-item-subtitle>
+                            </v-list-item>
+                        </v-list>
+                        <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn @click="dayEventsDialog = false">Sluiten</v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+
+                <!-- Snackbar for notifications -->
+                <v-snackbar v-model="snackbar" :color="snackbarColor" :timeout="3000">
+                    <span v-text="snackbarText"></span>
+                </v-snackbar>
+            </v-container>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.js"></script>
+
+    <script>
+        const { createApp } = Vue;
+        const { createVuetify } = Vuetify;
+
+        const vuetify = createVuetify({
+            theme: {
+                themes: {
+                    light: {
+                        colors: {
+                            primary: '#0C40AA',
+                            secondary: '#FCDD07',
+                        }
+                    }
+                }
+            }
+        });
+
+        const logoMap = {
+            'welpen': '/static/welpen_RGB.jpg',
+            'scouts': '/static/scouts_RGB.jpg',
+            'explorers': '/static/explorers_RGB.jpg',
+            'roverscouts': '/static/roverscouts_RGB.jpg'
+        };
+
+        const app = createApp({
+            data() {
+                return {
+                    calendars: {{ calendars_json|safe }},
+                    baseUrl: window.location.origin,
+                    activeTab: null,
+                    calendarEvents: {},
+                    subscribeDialog: false,
+                    eventDialog: false,
+                    selectedCalendar: null,
+                    selectedEvent: null,
+                    subscribeUrl: '',
+                    snackbar: false,
+                    snackbarText: '',
+                    snackbarColor: 'success',
+                    viewMode: 'list',
+                    currentMonth: new Date(),
+                    dayEventsDialog: false,
+                    selectedDayEvents: []
+                };
+            },
+            computed: {
+                currentMonthLabel() {
+                    return this.currentMonth.toLocaleDateString('nl-NL', { month: 'long', year: 'numeric' });
+                },
+                calendarDays() {
+                    const year = this.currentMonth.getFullYear();
+                    const month = this.currentMonth.getMonth();
+
+                    // First day of month
+                    const firstDay = new Date(year, month, 1);
+                    // Last day of month
+                    const lastDay = new Date(year, month + 1, 0);
+
+                    // Get day of week (0 = Sunday, adjust to Monday = 0)
+                    let startDay = firstDay.getDay() - 1;
+                    if (startDay === -1) startDay = 6;
+
+                    const days = [];
+                    const events = this.calendarEvents[this.activeTab] || [];
+
+                    // Previous month days
+                    const prevMonthLastDay = new Date(year, month, 0).getDate();
+                    for (let i = startDay - 1; i >= 0; i--) {
+                        const day = prevMonthLastDay - i;
+                        const date = new Date(year, month - 1, day);
+                        days.push({
+                            day,
+                            date: date.toISOString(),
+                            currentMonth: false,
+                            events: this.getEventsForDay(date, events)
+                        });
+                    }
+
+                    // Current month days
+                    for (let day = 1; day <= lastDay.getDate(); day++) {
+                        const date = new Date(year, month, day);
+                        days.push({
+                            day,
+                            date: date.toISOString(),
+                            currentMonth: true,
+                            events: this.getEventsForDay(date, events)
+                        });
+                    }
+
+                    // Next month days to fill grid
+                    const remaining = 42 - days.length;
+                    for (let day = 1; day <= remaining; day++) {
+                        const date = new Date(year, month + 1, day);
+                        days.push({
+                            day,
+                            date: date.toISOString(),
+                            currentMonth: false,
+                            events: this.getEventsForDay(date, events)
+                        });
+                    }
+
+                    return days;
+                }
+            },
+            mounted() {
+                // Set first tab as active
+                if (this.calendars.length > 0) {
+                    this.activeTab = this.calendars[0].name;
+                    this.loadEvents(this.calendars[0]);
+                    this.updateFavicon(this.calendars[0].name);
+                }
+            },
+            watch: {
+                activeTab(newVal) {
+                    const calendar = this.calendars.find(c => c.name === newVal);
+                    if (calendar && !calendar.protected && !this.calendarEvents[newVal]) {
+                        this.loadEvents(calendar);
+                    }
+                    this.updateFavicon(newVal);
+                }
+            },
+            methods: {
+                updateFavicon(calendarName) {
+                    const logoMap = {
+                        'bevers': '/static/bevers_RGB.jpg',
+                        'welpen': '/static/welpen_RGB.jpg',
+                        'scouts': '/static/scouts_RGB.jpg',
+                        'explorers': '/static/explorers_RGB.jpg',
+                        'roverscouts': '/static/roverscouts_RGB.jpg'
+                    };
+
+                    const favicon = document.getElementById('favicon');
+                    if (favicon && logoMap[calendarName]) {
+                        favicon.href = logoMap[calendarName];
+                    }
+                },
+                async loadEvents(calendar) {
+                    if (calendar.protected) return;
+
+                    try {
+                        const url = `${this.baseUrl}/api/events/${calendar.name}`;
+                        const response = await fetch(url);
+
+                        if (!response.ok) throw new Error('Failed to load events');
+
+                        const data = await response.json();
+                        this.calendarEvents[calendar.name] = data.events.map(event => ({
+                            ...event,
+                            start: new Date(event.start),
+                            end: event.end ? new Date(event.end) : new Date(event.start),
+                        }));
+                    } catch (error) {
+                        console.error('Error loading events:', error);
+                        this.showSnackbar('Fout bij laden van events', 'error');
+                    }
+                },
+                showSubscribeDialog(calendar) {
+                    this.selectedCalendar = calendar;
+                    const url = `${this.baseUrl}/${calendar.file}`;
+                    this.subscribeUrl = calendar.protected ? `${url}?key=WACHTWOORD_HIER` : url;
+                    this.subscribeDialog = true;
+                },
+                showEvent({ event }) {
+                    this.selectedEvent = event;
+                    this.eventDialog = true;
+                },
+                copyUrl() {
+                    navigator.clipboard.writeText(this.subscribeUrl).then(() => {
+                        this.showSnackbar('✅ URL gekopieerd!', 'success');
+                    }).catch(() => {
+                        this.showSnackbar('❌ Kopiëren mislukt', 'error');
+                    });
+                },
+                formatDate(date) {
+                    return new Date(date).toLocaleString('nl-NL', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                },
+                showSnackbar(text, color = 'success') {
+                    this.snackbarText = text;
+                    this.snackbarColor = color;
+                    this.snackbar = true;
+                },
+                sortedEvents(calendarName) {
+                    const events = this.calendarEvents[calendarName] || [];
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+
+                    return events
+                        .filter(event => new Date(event.start) >= today)
+                        .sort((a, b) => new Date(a.start) - new Date(b.start));
+                },
+                getEventsForDay(date, events) {
+                    const dayStart = new Date(date);
+                    dayStart.setHours(0, 0, 0, 0);
+                    const dayEnd = new Date(date);
+                    dayEnd.setHours(23, 59, 59, 999);
+
+                    return events.filter(event => {
+                        const eventStart = new Date(event.start);
+                        const eventEnd = new Date(event.end);
+                        return (eventStart >= dayStart && eventStart <= dayEnd) ||
+                               (eventEnd >= dayStart && eventEnd <= dayEnd) ||
+                               (eventStart <= dayStart && eventEnd >= dayEnd);
+                    });
+                },
+                previousMonth() {
+                    this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() - 1);
+                },
+                nextMonth() {
+                    this.currentMonth = new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() + 1);
+                },
+                showDayEvents(day) {
+                    if (day.events.length > 0) {
+                        this.selectedDayEvents = day.events;
+                        this.dayEventsDialog = true;
+                    }
+                },
+                getLogoPath(calendarName) {
+                    return logoMap[calendarName] || null;
+                }
+            }
+        });
+
+        app.use(vuetify);
+        app.mount('#app');
+    </script>
+</body>
+</html>

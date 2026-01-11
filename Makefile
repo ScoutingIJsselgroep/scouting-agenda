@@ -24,6 +24,7 @@ format: ## Format code with ruff
 check: ## Run linter and formatter checks
 	ruff check .
 	ruff format --check .
+	uv run ty check .
 
 fix: ## Auto-fix linting issues and format code
 	ruff check --fix .

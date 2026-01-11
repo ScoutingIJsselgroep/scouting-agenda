@@ -7,11 +7,13 @@ Main application that imports and registers all API endpoints.
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
-from scouting_agenda.api import calendars, health, sync
+from scouting_agenda.api import calendars, events, health, sync
 from scouting_agenda.settings import initialize_settings, load_config
 from scouting_agenda.utils.calendar import list_available_calendars
 
@@ -42,11 +44,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Mount static files
+static_dir = Path(__file__).parent / "static"
+static_dir.mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
+
 
 # Register routers
 app.include_router(health.router, tags=["health"])
 app.include_router(calendars.router, tags=["calendars"])
 app.include_router(sync.router, tags=["sync"])
+app.include_router(events.router, tags=["events"])
 
 
 def run_server():

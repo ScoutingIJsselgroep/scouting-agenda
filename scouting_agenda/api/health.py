@@ -2,19 +2,68 @@
 Health check and root endpoints.
 """
 
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+import json
+
+from fastapi import APIRouter, Request
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
 
 from scouting_agenda.settings import get_config, get_output_dir
 from scouting_agenda.utils.calendar import list_available_calendars
 
 router = APIRouter()
 
+# Setup Jinja2 templates
+templates = Jinja2Templates(directory="scouting_agenda/templates")
 
-@router.get("/")
-async def root():
+
+@router.get("/", response_class=HTMLResponse)
+async def root(request: Request):
     """
-    Health check and list available calendars.
+    Serve embeddable Vue/Vuetify widget.
+    """
+    config = get_config()
+
+    # Build calendar info for template
+    calendar_configs = []
+    for cal in config.get("calendars", []):
+        # Get friendly display name
+        display_names = {
+            "welpen": "Welpen",
+            "scouts": "Scouts",
+            "explorers": "Explorers",
+            "roverscouts": "Roverscouts",
+            "stam": "Stam",
+            "groepsbreed": "🔒 Kaderleden",
+        }
+
+        cal_name = cal.get("name")
+        password = cal.get("password", "")
+        calendar_configs.append(
+            {
+                "name": cal_name,
+                "display_name": display_names.get(cal_name, cal_name.capitalize()),
+                "file": cal.get("output"),
+                "visibility": cal.get("visibility", "all_details"),
+                "sources": cal.get("sources", []),
+                "protected": bool(password),
+            }
+        )
+
+    return templates.TemplateResponse(
+        "embed.html",
+        {
+            "request": request,
+            "calendars": calendar_configs,
+            "calendars_json": json.dumps(calendar_configs),
+        },
+    )
+
+
+@router.get("/api/health")
+async def health():
+    """
+    API health check endpoint.
     """
     calendars = list_available_calendars()
     config = get_config()
