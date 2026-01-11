@@ -1,415 +1,193 @@
-# Scouting Agenda - ICS Calendar Merger
+# Scouting IJsselgroep - Agenda Systeem
 
-Een systeem om meerdere iCal bronnen te mergen met configureerbare zichtbaarheid en te serveren via een eenvoudige API.
+Een systeem om meerdere Google Calendar agendas samen te voegen en te delen met ouders en leiding, zonder driedubbele administratie.
 
-## Features
+## 📋 Waarom?
 
-- **Configureerbaar via YAML**: Definieer meerdere kalenders met verschillende bronnen en zichtbaarheidsniveaus
-- **Home Assistant style secrets**: Gebruik `!secret` tag om gevoelige URLs veilig op te slaan
-- **Emoji support**: Voeg optioneel emoji's toe aan events voor betere visuele herkenning
-- **Visibility filtering**: 
-  - `title_only`: Alleen event titel zichtbaar
-  - `busy_only`: Alleen bezet/vrij (geen details)
-  - `all_details`: Alle event informatie
-- **Automatische merge**: Combineer meerdere ICS bronnen tot één kalender
-- **Deduplicatie**: Automatisch dubbele events detecteren en verwijderen
-- **FastAPI server**: Serveer gegenereerde ICS bestanden via HTTP
-- **Docker ready**: Inclusief Dockerfile en docker-compose
-- **GitHub Actions**: Automatische Docker builds bij elke push
-- **Cron-ready**: Gebruik het sync script voor periodieke updates
+Bij Scouting IJsselgroep hebben we verschillende agenda's voor elke speltak, groepsactiviteiten en kader. We willen:
 
-## Project Structure
+- **Eén bron van waarheid**: Leiding beheert hun eigen speltak agenda + groepsagenda
+- **Geen dubbel werk**: Activiteiten maar één keer invoeren
+- **Privacy-bewust delen**: Ouders zien alleen relevante info voor hun speltak
+- **Automatische synchronisatie**: Wijzigingen zijn direct zichtbaar
 
-```
-scouting-agenda/
-├── config.yaml              # Hoofdconfiguratie
-├── secrets.yaml             # Gevoelige URLs (niet committen!)
-├── secrets.yaml.example     # Template voor secrets
-├── sync.py                  # Entry point: sync script
-├── run_server.py            # Entry point: start server
-├── scouting_agenda/         # Python package
-│   ├── __init__.py
-│   ├── sync_calendars.py    # Merge script logica
-│   └── server.py            # FastAPI server
-├── output/                  # Gegenereerde ICS bestanden
-│   ├── verhuur.ics
-│   ├── welpen.ics
-│   └── scouts.ics
-├── requirements.txt
-└── pyproject.toml
-```
+### Hoe werkt het?
 
-## Installatie
+**Voor leiding (bewerkersrechten):**
 
-### Optie 1: Lokaal (Python)
+Je krijgt toegang tot de volgende **Google Calendars** (waarin je activiteiten kunt toevoegen/bewerken):
+- **Je eigen speltak** (bijv. Welpen, Scouts, Explorers)
+- **Groepsagenda** (overkoepelende activiteiten zoals kampvuren, scoutingfeest)
+- **Kader** (leidingoverleg, groepsraad, klusdag, etc.)
+
+**Voor ouders/leden (lezers):**
+
+Je abonneert op een ICS link die automatisch wordt gegenereerd:
+- Bijvoorbeeld: `https://agenda.scouting-ijsselgroep.nl/welpen.ics`
+- Deze bevat automatisch je speltak + groepsactiviteiten
+- Alleen titel en tijdstip zichtbaar (privacy-friendly)
+- Synchroniseert automatisch in je eigen agenda app
+
+## 📅 Beschikbare Agenda's
+
+| Agenda | Bronnen | Zichtbaarheid | URL |
+|--------|---------|---------------|-----|
+| **Welpen** | Welpen + Groepsactiviteiten | Alleen titel | `agenda.scouting-ijsselgroep.nl/welpen.ics` |
+| **Scouts** | Scouts + Groepsactiviteiten | Alleen titel | `agenda.scouting-ijsselgroep.nl/scouts.ics` |
+| **Explorers** | Explorers + Groepsactiviteiten | Alle details | `agenda.scouting-ijsselgroep.nl/explorers.ics` |
+| **Roverscouts** | Roverscouts + Groepsactiviteiten | Alle details | `agenda.scouting-ijsselgroep.nl/roverscouts.ics` |
+| **Stam** | Stam + Groepsactiviteiten | Alle details | `agenda.scouting-ijsselgroep.nl/stam.ics` |
+| **Groepsbreed** | Alle speltakken + Groepsactiviteiten + Kader | Alle details + emoji's | `agenda.scouting-ijsselgroep.nl/groepsbreed.ics` |
+
+### Emoji Legend (Groepsbreed)
+- 🟢 Welpen
+- 🟡 Scouts  
+- 🟠 Explorers
+- 🔴 Roverscouts
+- 🔵 Stam
+- ⚪ Groepsactiviteiten
+- 🟣 Kader
+
+## 🚀 Quick Start
+
+### Voor Ouders/Leden
+
+1. Kopieer de ICS link voor jouw speltak (zie tabel hierboven)
+2. Voeg toe aan je agenda app:
+
+**Google Calendar:**
+- Ga naar [Google Calendar](https://calendar.google.com)
+- Klik **+** naast "Andere agenda's"
+- Kies **Via URL**
+- Plak de link
+- Klik **Toevoegen**
+
+**Apple Calendar (iPhone/Mac):**
+- Open **Agenda** app
+- **Bestand** → **Nieuw agenda-abonnement** (Mac) of **Instellingen** → **Agenda's** → **Account toevoegen** → **Overige** (iPhone)
+- Plak de link
+- Klik **Abonneren**
+
+**Outlook:**
+- Ga naar **Agenda**
+- **Agenda toevoegen** → **Abonneren op internet**
+- Plak de link
+- Klik **Importeren**
+
+De agenda synchroniseert automatisch!
+
+## 🛠️ Voor Leiding: Setup
+
+### Optie 1: Docker (Aanbevolen)
 
 ```bash
-# Maak virtual environment
-uv venv
+# 1. Clone repository
+git clone https://github.com/ScoutingIJsselgroep/scouting-agenda.git
+cd scouting-agenda
 
-# Activeer environment
-source .venv/bin/activate  # macOS/Linux
-# of: .venv\Scripts\activate  # Windows
-
-# Installeer dependencies
-uv pip install -r requirements.txt
-
-# Maak secrets bestand
+# 2. Configureer secrets (vraag ICS URLs aan beheerder)
 cp secrets.yaml.example secrets.yaml
-# Edit secrets.yaml met je eigen ICS URLs
-```
+nano secrets.yaml
 
-### Optie 2: Docker (aangeraden voor productie)
-
-```bash
-# Build image
-docker build -t scouting-agenda .
-
-# Of gebruik docker-compose
+# 3. Start services
 docker-compose up -d
 ```
 
-**Docker omgevingsvariabelen:**
-- `TZ`: Tijdzone (default: `Europe/Amsterdam`)
+✅ Server draait op http://localhost:8000
 
-**Docker volumes:**
-- `/app/config.yaml`: Configuratie bestand (read-only)
-- `/app/secrets.yaml`: Secrets bestand (read-only)
-- `/app/output`: Output directory voor gegenereerde ICS bestanden
+Zie [Docker Quick Start](docs/DOCKER.md) voor meer details.
 
-**Docker compose** start automatisch:
-- Server op poort 8000
-- Sync service die elke 10 minuten draait
-
-### Optie 3: Pre-built Docker image (GitHub Container Registry)
+### Optie 2: Lokaal (Python)
 
 ```bash
-# Pull de latest image
-docker pull ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
+# 1. Install dependencies
+uv venv
+source .venv/bin/activate
+uv pip install -e .
 
-# Run met docker-compose
-docker-compose up -d
+# 2. Configureer secrets
+cp secrets.yaml.example secrets.yaml
+nano secrets.yaml
+
+# 3. Run sync
+python sync.py
+
+# 4. Start server
+python run_server.py
 ```
 
-## Configuratie
+## 📖 Documentatie
 
-### 1. Sec
+- **[API Documentatie](docs/API.md)** - Endpoints, kalender abonneren
+- **[Docker Guide](docs/DOCKER.md)** - Docker setup en troubleshooting
+- **[Development](docs/DEVELOPMENT.md)** - Ontwikkelomgeving, code style
+- **[Deployment](docs/DEPLOYMENT.md)** - Production deployment, Nginx, Kubernetes
 
-### Docker (aangeraden)
+## 🔧 Configuratie
 
-```bash
-# Start alles (server + sync)
-docker-compose up -d
+### Agenda Toevoegen
 
-# Alleen server
-docker-compose up -d scouting-calendar
-
-# Logs bekijken
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
-
-Kalenders beschikbaar op: `http://localhost:8000/verhuur.ics`
-
-### Lokaal (Python)rets instellen (Home Assistant style)
-
-Maak `secrets.yaml` aan met je gevoelige ICS URLs:
-
-```yaml
-# secrets.yaml (niet committen!)
-welpen_ics_url: "https://calendar.google.com/calendar/ical/..."
-scouts_ics_url: "https://nextcloud.example.com/remote.php/dav/..."
-```
-
-> **Let op**: `secrets.yaml` staat in `.gitignore` en wordt niet gecommit!
-
-### 2. Config.yaml gebruiken
-
-In `config.yaml` refereer je naar secrets met de `!secret` tag:
+Bewerk `config.yaml`:
 
 ```yaml
 calendars:
-  - name: verhuur
-    output: verhuur.ics
-    visibility: title_only
+  - name: nieuwe_speltak
+    output: nieuwe_speltak.ics
+    visibility: title_only  # of: busy_only, all_details
     sources:
-      - url: !secret welpen_ics_url
-        name: "Welpen"
-      - url: !secret scouts_ics_url
-        name: "Scouts"
+      - url: !secret nieuwe_speltak_ics_url
+        name: "Nieuwe Speltak"
+        emoji: "🟣"  # Optioneel
 ```
 
-### 3. Visibility opties
+### Zichtbaarheidsniveaus
 
-- **`title_only`**: Toont alleen de event titel en tijdstip. Beschrijving, locatie, deelnemers etc. worden verwijderd.
-- **`busy_only`**: Toont alleen bezet/vrij status. Event wordt omgezet naar "Bezet" zonder details.
-- **`all_details`**: Alle event informatie wordt behouden (standaard).
+- **`title_only`**: Alleen titel + tijd (voor ouders/leden)
+- **`busy_only`**: Alleen bezet/vrij status
+- **`all_details`**: Alle informatie (voor leiding)
 
-## Gebruik
+Zie [config.yaml](config.yaml) voor volledig overzicht.
 
-### 1. Eenmalig sync
+## 🔒 Privacy & Beveiliging
+
+- **Secrets gescheiden**: ICS URLs in `secrets.yaml` (niet in git)
+- **Privacy-niveaus**: Ouders zien alleen titel, geen gevoelige details
+- **Read-only voor leden**: ICS links zijn alleen-lezen
+- **HTTPS**: In productie achter Nginx/Caddy met SSL
+
+## 🤝 Bijdragen
+
+Zie [DEVELOPMENT.md](docs/DEVELOPMENT.md) voor development setup.
+
+Code style:
+- Python 3.12+
+- Ruff voor linting en formatting
+- Type hints waar mogelijk
+- Docstrings voor functies
 
 ```bash
-python sync.py
-# of via module:
-python -m scouting_agenda.sync_calendars
+# Check code quality
+make lint
+make format
 ```
 
-Dit genereert alle ICS bestanden in de `output/` directory.
+## 📝 License
 
-### 2. Server starten
+MIT License - zie [LICENSE](LICENSE) bestand.
 
-```bash
-python run_server.py
-# of via module:
-python -m scouting_agenda.server
-```
+## 💬 Support
 
-Server draait op `http://localhost:8000`
+- **Issues**: [GitHub Issues](https://github.com/ScoutingIJsselgroep/scouting-agenda/issues)
+- **Email**: [tristan@scouting-ijsselgroep.nl](mailto:tristan@scouting-ijsselgroep.nl)
 
-Kalenders beschikbaar op:
-- `http://localhost:8000/verhuur.ics`
-- `http://localhost:8000/welpen.ics`
-- `http://localhost:8000/scouts.ics`
+## 🙏 Credits
 
-### 3. Cron job (automatische sync)
+Gebouwd met:
+- [FastAPI](https://fastapi.tiangolo.com/) - Web framework
+- [iCalendar](https://icalendar.readthedocs.io/) - ICS parsing/generation
+- [Ruff](https://docs.astral.sh/ruff/) - Linting en formatting
+- [Docker](https://www.docker.com/) - Containerization
 
-Voeg toe aan crontab voor sync elke 10 minuten:
+---
 
-```bash
-crontab -e
-```
-
-```cron
-*/10 * * * * cd /path/to/scouting-agenda && /path/to/.venv/bin/python sync.py >> /tmp/calendar-sync.log 2>&1
-```
-
-### 4. Server als service (optioneel)
-
-Voor productie gebruik, draai met systemd, supervisor, of Docker.
-
-Voorbeeld systemd service (`/etc/systemd/system/calendar-server.service`):
-
-```ini
-[Unit]
-Description=Calendar ICS Server
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/path/to/scouting-agenda
-Environment="PATH=/path/to/scouting-agenda/.venv/bin"
-ExecStart=/path/to/scouting-agenda/.venv/bin/python run_server.py
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-## API Endpoints
-
-### GET /{calendar}.ics
-
-Serveer een gegenereerde ICS kalender.
-
-**Voorbeeld:**
-```bash
-curl http://localhost:8000/verhuur.ics
-```
-
-### GET /
-
-Health check en lijst van beschikbare kalenders.
-
-**Response:**
-```json
-{
-  "status": "ok",
-  "calendars": ["verhuur.ics", "welpen.ics", "scouts.ics"]
-}
-```
-
-### GET /sync
-
-Trigger handmatige sync (optioneel, voor debugging).
-
-## Development
-
-### Setup
-
-```bash
-# Install dev dependencies (includes ruff)
-uv pip install -e ".[dev]"
-
-# Install pre-commit hooks (optional)
-pip install pre-commit
-pre-commit install
-```
-
-### Code Quality
-
-**Ruff** is geconfigureerd voor linting en formatting:
-
-```bash
-# Lint code
-ruff check .
-
-# Auto-fix issues
-ruff check --fix .
-
-# Format code
-ruff format .
-
-# Check formatting without changes
-ruff format --check .
-```
-
-**Of gebruik Makefile shortcuts:**
-
-```bash
-make lint      # Run linter
-make format    # Format code
-make check     # Check lint + format
-make fix       # Auto-fix + format
-```
-
-### Running
-
-```bash
-# Run sync met debug output
-python sync.py --verbose
-
-# Server met auto-reload
-uvicorn scouting_agenda.server:app --reload --host 0.0.0.0 --port 8000
-
-# Docker development build
-docker build -t scouting-agenda:dev .
-docker run -p 8000:8000 -v $(pwd)/config.yaml:/app/config.yaml -v $(pwd)/secrets.yaml:/app/secrets.yaml scouting-agenda:dev
-```
-
-### Pre-commit Hooks
-
-Pre-commit hooks runnen automatisch ruff bij elke commit:
-
-```bash
-# Setup
-pre-commit install
-
-# Manual run
-pre-commit run --all-files
-```
-
-## Deployment
-
-### Docker met GitHub Actions
-
-De repository bevat een GitHub Actions workflow die automatisch Docker images bouwt:
-
-1. **Push naar main/master**: Bouwt en pusht `latest` tag
-2. **Tag met `v*`**: Bouwt en pusht versioned tags (bijv. `v1.0.0`, `1.0`, `1`)
-3. **Pull requests**: Bouwt maar pusht niet
-
-**Images worden gepubliceerd naar GitHub Container Registry:**
-```
-ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
-ghcr.io/ScoutingIJsselgroep/scouting-agenda:v1.0.0
-```
-
-**Gebruik in productie:**
-
-```bash
-# Maak docker-compose.yml met GHCR image
-version: '3.8'
-services:
-  scouting-calendar:
-    image: ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./config.yaml:/app/config.yaml:ro
-      - ./secrets.yaml:/app/secrets.yaml:ro
-      - calendar-data:/app/output
-    restart: unless-stopped
-
-volumes:
-  calendar-data:
-```
-
-### Kubernetes/Cloud
-
-Het Docker image kan direct gebruikt worden in Kubernetes, Cloud Run, of andere container platforms.
-
-**Voorbeeld Kubernetes deployment:**
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: scouting-calendar
-spec:
-  replicas: 1
-  template:
-    spec:
-      containers:
-      - name: server
-        image: ghcr.io/ScoutingIJsselgroep/scouting-agenda:latest
-        ports:
-        - containerPort: 8000
-        volumeMounts:
-        - name: config
-          mountPath: /app/config.yaml
-          subPath: config.yaml
-        - name: secrets
-          mountPath: /app/secrets.yaml
-          subPath: secrets.yaml
-      volumes:
-      - name: config
-        configMap:
-          name: calendar-config
-      - name: secrets
-        secret:
-          name: calendar-secrets
-```
-
-## Home Assistant Integratie
-
-Voeg kalenders toe in Home Assistant via Remote Calendar:
-
-```yaml
-# configuration.yaml
-calendar:
-  - platform: ical
-    name: "Verhuur Lokaal"
-    url: "http://192.168.1.100:8000/verhuur.ics"
-  
-  - platform: ical
-    name: "Welpen"
-    url: "http://192.168.1.100:8000/welpen.ics"
-  
-  - platform: ical
-    name: "Scouts"
-    url: "http://192.168.1.100:8000/scouts.ics"
-```
-
-## Troubleshooting
-
-**Sync faalt:**
-- Check of ICS URLs bereikbaar zijn
-- Verhoog `timeout_seconds` in config.yaml
-- Run met `--verbose` voor debug output
-
-**Server start niet:**
-- Check of poort 8000 vrij is
-- Check output directory bestaat en schrijfbaar is
-
-**Events missen:**
-- Check of `visibility` correct is ingesteld
-- Events met identieke UID worden gededupliceerd
-- Check bron ICS bestanden handmatig
-
-## License
-
-MIT
+**Scouting IJsselgroep** | [Website](https://scouting-ijsselgroep.nl) | [Facebook](https://facebook.com/scoutingijsselgroep)
