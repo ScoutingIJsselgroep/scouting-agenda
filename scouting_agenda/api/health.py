@@ -2,7 +2,6 @@
 Health check and root endpoints.
 """
 
-import json
 from pathlib import Path
 
 from fastapi import APIRouter, Request

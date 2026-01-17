@@ -108,7 +108,7 @@ def merge_calendars(
             count_in += 1
             # Cast to Event for type safety
             event = Event.from_ical(component.to_ical())
-            
+
             # Check if event has [optie] tag - only include if include_opties is True
             # By default, [optie] events are excluded from individual calendars
             # but can be included in the groepsbreed calendar by setting include_opties: true
@@ -121,7 +121,7 @@ def merge_calendars(
                 else:
                     # Include [optie] events when explicitly enabled (e.g., for groepsbreed calendar)
                     logger.debug(f"Including [optie] event '{summary[:60]}' (include_opties=True)")
-            
+
             key = event_key(event)
 
             if key in seen:
