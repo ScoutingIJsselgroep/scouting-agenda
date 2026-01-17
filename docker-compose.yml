@@ -2,7 +2,6 @@ services:
   scouting-calendar:
     build: .
     image: scouting-agenda:latest
-    container_name: scouting-calendar
     ports:
       - "8000:8000"
     volumes:
@@ -35,7 +34,6 @@ services:
   scouting-calendar-sync:
     build: .
     image: scouting-agenda:latest
-    container_name: scouting-calendar-sync
     volumes:
       - ./config.yaml:/app/config.yaml:ro
       - ./secrets.yaml:/app/secrets.yaml:ro

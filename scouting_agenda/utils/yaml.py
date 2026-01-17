@@ -38,9 +38,9 @@ def secret_constructor(loader: yaml.Loader, node: yaml.Node) -> str:
 
     # Load secrets file
     secrets_path = Path("secrets.yaml")
-    if not secrets_path.exists():
+    if not secrets_path.exists() or not secrets_path.is_file():
         logger.warning(
-            f"secrets.yaml not found and no env var {env_key}, secret '{secret_key}' unavailable"
+            f"secrets.yaml not found (or is a directory) and no env var {env_key}, secret '{secret_key}' unavailable"
         )
         return f"!secret {secret_key}"
 
