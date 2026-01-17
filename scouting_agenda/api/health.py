@@ -3,6 +3,7 @@ Health check and root endpoints.
 """
 
 import json
+from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -14,7 +15,8 @@ from scouting_agenda.utils.calendar import list_available_calendars
 router = APIRouter()
 
 # Setup Jinja2 templates
-templates = Jinja2Templates(directory="scouting_agenda/templates")
+templates_dir = Path(__file__).parent.parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
 
 
 @router.get("/", response_class=HTMLResponse)
