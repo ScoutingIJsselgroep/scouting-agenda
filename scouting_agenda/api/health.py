@@ -58,7 +58,6 @@ async def root(request: Request):
         {
             "request": request,
             "calendars": calendar_configs,
-            "calendars_json": json.dumps(calendar_configs),
         },
     )
 

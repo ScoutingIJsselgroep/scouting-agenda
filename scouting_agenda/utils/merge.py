@@ -54,14 +54,21 @@ def merge_calendars(
     sources: list[tuple[str, str | None, str, Calendar]],
     visibility: str,
     metadata: dict[str, Any],
+    calendar_name: str | None = None,
+    include_opties: bool = False,
 ) -> Calendar:
     """
     Merge multiple calendars into one with visibility filtering.
+
+    Events with [optie] in the title are only included if include_opties=True.
+    By default (include_opties=False), [optie] events are excluded.
 
     Args:
         sources: List of (source_name, source_emoji, source_url, calendar) tuples
         visibility: Visibility level to apply
         metadata: Calendar metadata (name, description, timezone)
+        calendar_name: Name of the calendar being merged
+        include_opties: If True, include events with [optie] tag. Default: False.
 
     Returns:
         Merged calendar with deduplicated events
@@ -101,6 +108,20 @@ def merge_calendars(
             count_in += 1
             # Cast to Event for type safety
             event = Event.from_ical(component.to_ical())
+            
+            # Check if event has [optie] tag - only include if include_opties is True
+            # By default, [optie] events are excluded from individual calendars
+            # but can be included in the groepsbreed calendar by setting include_opties: true
+            summary = _norm_text(event.get("SUMMARY", ""))
+            if "[optie]" in summary.lower():
+                if not include_opties:
+                    # Skip [optie] events unless explicitly enabled
+                    logger.debug(f"Skipping [optie] event '{summary[:60]}' (include_opties=False)")
+                    continue
+                else:
+                    # Include [optie] events when explicitly enabled (e.g., for groepsbreed calendar)
+                    logger.debug(f"Including [optie] event '{summary[:60]}' (include_opties=True)")
+            
             key = event_key(event)
 
             if key in seen:

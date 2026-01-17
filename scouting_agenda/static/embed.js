@@ -25,7 +25,7 @@ const logoMap = {
 const app = createApp({
     data() {
         return {
-            calendars: {{ calendars_json|safe }},
+            calendars: window.CALENDARS_DATA || [],
             baseUrl: window.location.origin,
             activeTab: null,
             calendarEvents: {},
@@ -112,6 +112,10 @@ const app = createApp({
     },
     watch: {
         activeTab(newVal) {
+            // Don't load events for the handleiding tab
+            if (newVal === 'handleiding') {
+                return;
+            }
             const calendar = this.calendars.find(c => c.name === newVal);
             if (calendar && !calendar.protected && !this.calendarEvents[newVal]) {
                 this.loadEvents(calendar);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scouting IJsselake  - Agenda Widget</title>
+    <title>Agenda | Scouting IJsselgroep</title>
     <link rel="icon" type="image/png" id="favicon" href="">
     <link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600;700&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.css" rel="stylesheet">
@@ -28,9 +28,207 @@
                             />
                             <span v-text="cal.display_name"></span>
                         </v-tab>
+                        <v-tab value="handleiding">
+                            <v-icon start>mdi-book-open-variant</v-icon>
+                            Handleiding
+                        </v-tab>
                     </v-tabs>
 
                     <v-window v-model="activeTab">
+                        <!-- Handleiding tab -->
+                        <v-window-item value="handleiding">
+                            <v-card flat class="pa-4">
+                                <v-card-title class="text-h5 heading mb-4" style="color: #0C40AA;">
+                                    <v-icon color="#0C40AA" class="mr-2">mdi-book-open-variant</v-icon>
+                                    Handleiding voor leiding
+                                </v-card-title>
+
+                                <v-card-text>
+                                    <v-alert
+                                        color="#BCCAE7"
+                                        class="mb-6"
+                                        border="start"
+                                        border-color="#0C40AA"
+                                        icon="mdi-information"
+                                    >
+                                        <div class="text-subtitle-1 font-weight-bold mb-2">Welkom bij de Scouting IJsselgroep Agenda!</div>
+                                        <div class="text-body-2">
+                                            Deze handleiding helpt je om de agenda te gebruiken en events toe te voegen.
+                                        </div>
+                                    </v-alert>
+
+                                    <v-expansion-panels variant="accordion" class="mb-4">
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-calendar-check</v-icon>
+                                                Hoe werkt de agenda?
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <p class="mb-3">
+                                                        De agenda combineert meerdere kalenders in één overzichtelijke weergave. Elke speltak heeft een eigen tab met:
+                                                    </p>
+                                                    <ul class="pl-4 mb-3">
+                                                        <li class="mb-2"><strong>Maandweergave:</strong> Bekijk alle events in een kalendervorm</li>
+                                                        <li class="mb-2"><strong>Lijstweergave:</strong> Zie alle aankomende events op een rij</li>
+                                                        <li class="mb-2"><strong>Event details:</strong> Klik op een event voor meer informatie</li>
+                                                    </ul>
+                                                    <p>
+                                                        Leiding en ouders kunnen zich abonneren op de kalender zodat events automatisch in hun eigen agenda-app verschijnen.
+                                                    </p>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-calendar-plus</v-icon>
+                                                Events toevoegen aan je kalender
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <p class="mb-3">
+                                                        <strong>Belangrijk:</strong> Events worden niet direct in deze widget toegevoegd. Je moet ze toevoegen aan de bronkalender die gekoppeld is aan je speltak.
+                                                    </p>
+                                                    <p class="mb-3">
+                                                        <strong>Stappen:</strong>
+                                                    </p>
+                                                    <ol class="pl-4 mb-3">
+                                                        <li class="mb-2">Ga naar je originele kalender (bijv. Google Calendar)</li>
+                                                        <li class="mb-2">Voeg daar het nieuwe event toe met alle details</li>
+                                                        <li class="mb-2">Het event verschijnt automatisch in deze agenda (kan tot 10 minuten duren)</li>
+                                                    </ol>
+                                                    <v-alert type="info" variant="tonal" class="mt-3">
+                                                        <div class="text-caption">
+                                                            <strong>Tip:</strong> Zorg dat je event een duidelijke titel heeft en alle belangrijke informatie bevat (tijd, locatie, beschrijving).
+                                                        </div>
+                                                    </v-alert>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-tag-outline</v-icon>
+                                                Optionele events met [optie]
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <p class="mb-3">
+                                                        Soms wil je een event toevoegen dat <strong>optioneel</strong> is - bijvoorbeeld als je hem alvast wil toevoegen, maar niet wil communiceren met leden of als je een event wilt toevoegen dat nog niet bevestigd is.
+                                                    </p>
+                                                    <p class="mb-3">
+                                                        <strong>Hoe werkt het?</strong>
+                                                    </p>
+                                                    <ol class="pl-4 mb-3">
+                                                        <li class="mb-2">Voeg <code class="text-caption">[optie]</code> toe in de eventtitel (bijv. "[optie] Extra kamp")</li>
+                                                        <li class="mb-2">Het event verschijnt <strong>niet</strong> in de individuele speltak-agenda's</li>
+                                                        <li class="mb-2">Het event verschijnt <strong>wel</strong> in de groepsbreed agenda (voor kaderleden), handig zodat we weten wanneer het gebouw bezet is</li>
+                                                    </ol>
+                                                    <v-alert type="info" variant="tonal" class="mt-3">
+                                                        <div class="text-caption">
+                                                            <strong>Voorbeeld:</strong> Als je "Sint Jorisdag [optie]" toevoegt, zien kaderleden dit als "Sint Jorisdag" in de groepsbreed agenda, maar leden niet in de individuele speltak-agenda's.
+                                                        </div>
+                                                    </v-alert>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-share-variant</v-icon>
+                                                Kalender delen met ouders
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <p class="mb-3">
+                                                        Ouders kunnen zich abonneren op de kalender zodat alle events automatisch in hun telefoon verschijnen.
+                                                    </p>
+                                                    <ol class="pl-4 mb-3">
+                                                        <li class="mb-2">Klik op de <strong>"Abonneren"</strong> knop bij de juiste speltak</li>
+                                                        <li class="mb-2">Kopieer de kalender-URL</li>
+                                                        <li class="mb-2">Volg de instructies voor hun platform (Google Calendar, Apple Calendar, Outlook)</li>
+                                                    </ol>
+                                                    <p class="mb-3">
+                                                        <strong>Voordelen:</strong>
+                                                    </p>
+                                                    <ul class="pl-4 mb-3">
+                                                        <li class="mb-2">Events worden automatisch bijgewerkt</li>
+                                                        <li class="mb-2">Ouders zien direct wanneer er iets is</li>
+                                                        <li class="mb-2">Geen handmatig overtypen meer nodig</li>
+                                                    </ul>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-lock</v-icon>
+                                                Beveiligde kalenders
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <p class="mb-3">
+                                                        Sommige kalenders (zoals de kaderleden kalender) zijn beveiligd met een wachtwoord.
+                                                    </p>
+                                                    <p class="mb-3">
+                                                        <strong>Voor leiding:</strong>
+                                                    </p>
+                                                    <ul class="pl-4 mb-3">
+                                                        <li class="mb-2">Vraag het wachtwoord aan de webmaster of groepsleiding</li>
+                                                        <li class="mb-2">Vervang "WACHTWOORD_HIER" in de abonneer-URL met het echte wachtwoord</li>
+                                                        <li class="mb-2">Deel dit wachtwoord alleen met geautoriseerde personen</li>
+                                                    </ul>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+
+                                        <v-expansion-panel>
+                                            <v-expansion-panel-title class="heading">
+                                                <v-icon color="#0C40AA" class="mr-3">mdi-help-circle</v-icon>
+                                                Veelgestelde vragen
+                                            </v-expansion-panel-title>
+                                            <v-expansion-panel-text>
+                                                <div class="text-body-2">
+                                                    <div class="mb-4">
+                                                        <strong class="text-subtitle-2">Waarom zie ik geen events?</strong>
+                                                        <p class="mt-1">
+                                                            Controleer of je op de juiste speltak-tab zit. Events worden automatisch geladen vanuit de bronkalender.
+                                                        </p>
+                                                    </div>
+                                                    <div class="mb-4">
+                                                        <strong class="text-subtitle-2">Hoe vaak wordt de kalender bijgewerkt?</strong>
+                                                        <p class="mt-1">
+                                                            De kalender wordt automatisch gesynchroniseerd. Nieuwe events kunnen enkele minuten duren voordat ze verschijnen.
+                                                        </p>
+                                                    </div>
+                                                    <div class="mb-4">
+                                                        <strong class="text-subtitle-2">Kan ik events direct hier bewerken?</strong>
+                                                        <p class="mt-1">
+                                                            Nee, events moeten worden bewerkt in de originele kalender. Deze widget toont alleen de samengevoegde kalenders.
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <strong class="text-subtitle-2">Ik heb een probleem, wat nu?</strong>
+                                                        <p class="mt-1">
+                                                            Neem contact op met de webmaster of groepsleiding voor hulp.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </v-expansion-panel-text>
+                                        </v-expansion-panel>
+                                    </v-expansion-panels>
+
+                                    <v-divider class="my-4"></v-divider>
+
+                                    <div class="text-center text-caption text-grey-darken-1">
+                                        <v-icon size="small" class="mr-1">mdi-information</v-icon>
+                                        Vragen? Neem contact op met de webmaster
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-window-item>
+
                         <v-window-item v-for="cal in calendars" :key="cal.name" :value="cal.name">
                             <v-card flat class="pa-4">
                                 <!-- Info banner -->
@@ -342,6 +540,10 @@
         </v-app>
     </div>
 
+    <script>
+        // Pass calendar data to JavaScript
+        window.CALENDARS_DATA = {{ calendars|tojson|safe }};
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/vue@3.4.0/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/vuetify@3.4.0/dist/vuetify.min.js"></script>
     <script src="/static/embed.js"></script>

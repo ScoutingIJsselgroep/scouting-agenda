@@ -57,11 +57,13 @@ def sync_calendar(cal_config: dict[str, Any], base_config: dict[str, Any]) -> No
     visibility = cal_config.get("visibility", VisibilityLevel.ALL_DETAILS)
     sources = cal_config.get("sources", [])
     metadata = cal_config.get("metadata", {})
+    include_opties = cal_config.get("include_opties", False)  # Default: exclude [optie] events
 
     logger.info(f"\n{'=' * 60}")
     logger.info(f"Syncing calendar: {name}")
     logger.info(f"Output: {output_file}")
     logger.info(f"Visibility: {visibility}")
+    logger.info(f"Include opties: {include_opties}")
     logger.info(f"Sources: {len(sources)}")
     logger.info(f"{'=' * 60}")
 
@@ -102,7 +104,9 @@ def sync_calendar(cal_config: dict[str, Any], base_config: dict[str, Any]) -> No
 
     # Merge calendars
     try:
-        merged = merge_calendars(fetched_sources, visibility, metadata)
+        merged = merge_calendars(
+            fetched_sources, visibility, metadata, calendar_name=name, include_opties=include_opties
+        )
 
         # Write output
         output_path = output_dir / output_file

@@ -4,6 +4,7 @@ Calendar event visibility filtering.
 
 import hashlib
 import logging
+import re
 
 from icalendar import Event, vText
 

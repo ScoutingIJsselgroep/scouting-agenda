@@ -70,6 +70,7 @@ calendars:
   - name: verhuur
     output: verhuur.ics
     visibility: busy_only
+    include_opties: true
     sources:
       - url: !secret verhuur_ics_url
         name: "Verhuur"
@@ -81,6 +82,7 @@ calendars:
   - name: groepsbreed
     output: groepsbreed.ics
     visibility: all_details
+    include_opties: true
     password: !secret groepsbreed_password
     sources:
       - url: !secret welpen_ics_url
